@@ -29,7 +29,11 @@ fn extract_metric(line: &str, raw_date_string: &str) -> Result<Metric> {
     }
 }
 
-pub fn read_front_matter(path: &str, needed_metrics: Vec<&str>) -> Result<Vec<Metric>> {
+pub fn read_front_matter(
+    path: &str,
+    needed_metrics: &Vec<&str>,
+    accumulator: &mut Vec<Metric>,
+) -> Result<(), anyhow::Error> {
     let file = File::open(path).with_context(|| format!("Failed to open file: {}", path))?;
     let raw_date_string = Path::new(path)
         .file_stem()
@@ -37,7 +41,6 @@ pub fn read_front_matter(path: &str, needed_metrics: Vec<&str>) -> Result<Vec<Me
         .ok_or_else(|| anyhow::anyhow!("Failed to get file name from path"))?
         .to_string();
     let reader = BufReader::new(file);
-    let mut result: Vec<Metric> = Vec::new();
     let mut in_front_matter = false;
     for (i, line) in reader.lines().enumerate() {
         let line = line.with_context(|| format!("Failed to read line {}", i + 1))?;
@@ -51,13 +54,12 @@ pub fn read_front_matter(path: &str, needed_metrics: Vec<&str>) -> Result<Vec<Me
                 continue;
             }
         }
-        for metric in &needed_metrics {
+        for metric in needed_metrics {
             if line.starts_with(metric) {
                 let metric = extract_metric(&line, &raw_date_string)?;
-                result.push(metric);
+                accumulator.push(metric);
             }
         }
     }
-
-    Ok(result)
+    Ok(())
 }
