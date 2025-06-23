@@ -18,7 +18,7 @@ pub struct Metric {
 
 pub fn read_front_matter(
     path: &str,
-    needed_metrics: &Vec<&str>,
+    needed_metrics: &Vec<String>,
     conn: &Connection,
 ) -> Result<(), anyhow::Error> {
     if !should_read_file(path, conn)? {
@@ -116,7 +116,7 @@ fn should_read_file(path: &str, conn: &Connection) -> Result<bool> {
 
 pub fn write_metric_to_db(metrics: Metric, conn: &Connection) -> Result<()> {
     conn.execute(
-        "INSERT INTO metrics (file_path, name, value, date) VALUES (?1, ?2, ?3, ?4)",
+        "INSERT OR REPLACE INTO metrics (file_path, name, value, date) VALUES (?1, ?2, ?3, ?4)",
         rusqlite::params![
             metrics.file_path,
             metrics.name,

@@ -19,7 +19,7 @@ pub fn init_db(path: &str) -> Result<Connection> {
         );
 
         CREATE TABLE IF NOT EXISTS metrics (
-            file_path TEXT,
+            file_path TEXT PRIMARY KEY,
             name TEXT,
             value INTEGER,
             date TEXT
