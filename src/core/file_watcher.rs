@@ -1,8 +1,6 @@
 use notify::{Event, RecursiveMode, Result, Watcher, recommended_watcher};
 use std::{collections::HashSet, path::Path, sync::mpsc::channel};
 
-use crate::read_journal::read_front_matter;
-
 pub fn watch_files(
     conn: &rusqlite::Connection,
     dir: &str,
@@ -39,7 +37,7 @@ pub fn sync_data(
                     println!("Skipping already visited file: {}", file_path);
                     continue; // Skip already visited paths
                 }
-                match read_front_matter(file_path, needed_metrics, conn) {
+                match super::read_journal::read_front_matter(file_path, needed_metrics, conn) {
                     Ok(_) => println!("Successfully processed: {}", file_path),
                     Err(e) => eprintln!("Error processing {}: {}", file_path, e),
                 }
