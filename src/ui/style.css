@@ -1,0 +1,19 @@
+.day-container {
+  min-height: 30px;
+  max-height: 30px;
+  padding: 10px;
+  background-color: #f0f0f0;
+}
+
+.day-button {
+  min-height: 10px;
+  max-height: 10px;
+  min-width: 80px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.day-button:hover {
+  background-color: #e0e0e0;
+}

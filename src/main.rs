@@ -1,13 +1,11 @@
-use gtk::prelude::*;
-use gtk::{Application, glib};
+use ui::ui_main;
 
 mod core;
 mod db;
+mod ui;
 
 const APP_ID: &str = "org.gtk_rs.habitron";
 
-fn main() -> glib::ExitCode {
-    let app = Application::builder().application_id(APP_ID).build();
-
-    app.run()
+fn main() {
+    ui_main();
 }

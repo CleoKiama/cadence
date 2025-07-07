@@ -8,6 +8,8 @@ use std::io::prelude::*;
 use std::path::Path;
 use std::time::SystemTime;
 
+pub const DB_DATE_FORMAT: &str = "%Y-%m-%d";
+
 #[derive(Debug)]
 pub struct Metric {
     pub name: String,
@@ -59,7 +61,7 @@ fn extract_metric(line: &str, path: &str) -> Result<Metric> {
         .and_then(|name| name.to_str())
         .ok_or_else(|| anyhow::anyhow!("Failed to get file name from path"))?
         .to_string();
-    let date = NaiveDate::parse_from_str(&raw_date_string, "%Y-%m-%d").with_context(|| {
+    let date = NaiveDate::parse_from_str(&raw_date_string, DB_DATE_FORMAT).with_context(|| {
         format!(
             "Failed to parse the date from the file name {}",
             raw_date_string,
@@ -121,7 +123,7 @@ pub fn write_metric_to_db(metrics: Metric, conn: &Connection) -> Result<()> {
             metrics.file_path,
             metrics.name,
             metrics.value,
-            metrics.date.format("%Y-%m-%d").to_string()
+            metrics.date.format(DB_DATE_FORMAT).to_string()
         ],
     )
     .with_context(|| format!("Failed to insert metric: {:?}", metrics))?;
