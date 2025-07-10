@@ -1,25 +1,29 @@
-use anyhow::Context;
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, Settings, glib};
+use gtk::{Application, ApplicationWindow, glib};
+
+use crate::ui::ui_theme::{detect_and_apply_theme, on_theme_change};
 
 mod current_week;
+mod ui_theme;
 
 const APP_ID: &str = "org.gtk_rs.habitron";
 
 pub fn ui_main() -> glib::ExitCode {
-    // Create a new application
     let app = Application::builder().application_id(APP_ID).build();
 
-    // Connect to "activate" signal of `app`
     app.connect_activate(build_ui);
 
-    // Run the application
     app.run()
 }
 
 fn build_ui(app: &Application) {
-    if let Err(err) = detect_and_apply_theme() {
-        eprintln!("something went wrong failed to load the css {}", err)
+    if let Ok(settings) = detect_and_apply_theme() {
+        settings.connect_gtk_theme_name_notify(move |settings| {
+            let is_dark = settings.is_gtk_application_prefer_dark_theme();
+            on_theme_change(is_dark);
+        });
+    } else {
+        eprintln!("something went wrong failed to load the css")
     }
 
     let gtk_box = gtk::Box::builder()
@@ -41,40 +45,4 @@ fn build_ui(app: &Application) {
         .build();
 
     window.present();
-}
-
-fn detect_and_apply_theme() -> Result<(), anyhow::Error> {
-    let settings =
-        Settings::default().ok_or_else(|| anyhow::anyhow!("Could not get default settings"))?;
-
-    let is_dark = settings.is_gtk_application_prefer_dark_theme();
-    if is_dark {
-        load_dark_theme_css()?
-    } else {
-        load_light_theme_css()?
-    }
-
-    Ok(())
-}
-
-fn load_dark_theme_css() -> Result<(), anyhow::Error> {
-    load_css_from_path("./style-dark.css")
-}
-
-fn load_light_theme_css() -> Result<(), anyhow::Error> {
-    load_css_from_path("./style-light.css")
-}
-
-fn load_css_from_path(path: &str) -> Result<(), anyhow::Error> {
-    let provider = gtk::CssProvider::new();
-    let css_file_path = std::path::Path::new(path);
-    provider.load_from_path(css_file_path);
-
-    gtk::style_context_add_provider_for_display(
-        &gtk::gdk::Display::default().with_context(|| "failed to load the css")?,
-        &provider,
-        gtk::STYLE_PROVIDER_PRIORITY_APPLICATION,
-    );
-
-    Ok(())
 }

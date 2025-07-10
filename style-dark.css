@@ -1,13 +1,15 @@
---prop: red;
+@define-color primary-foregroud #ffffff;
+@define-color muted-background #1a1a1a;
+@define-color primary-background #2d2d2d;
 
 .day-container {
-  background-color: #2d2d2d;
+  background-color: @muted-background;
   padding: 20px;
 }
 
 .day-button {
-  background-color: #4a90e2;
-  color: var(prop);
+  background-color: @primary-background;
+  color: @primary-foregroud;
   border-radius: 8px;
   padding: 10px 20px;
   margin: 5px;

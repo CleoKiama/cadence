@@ -1,9 +1,9 @@
 @define-color primary-foregroud #3182ce;
+@define-color muted-background #6b7280;
 @define-color primary-background #ffffff;
-@define-color text_color #ffffff;
 
 .day-container {
-  background-color: #2d2d2d;
+  background-color: @muted-background;
   padding: 20px;
 }
 
