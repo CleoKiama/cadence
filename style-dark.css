@@ -1,0 +1,14 @@
+--prop: red;
+
+.day-container {
+  background-color: #2d2d2d;
+  padding: 20px;
+}
+
+.day-button {
+  background-color: #4a90e2;
+  color: var(prop);
+  border-radius: 8px;
+  padding: 10px 20px;
+  margin: 5px;
+}
