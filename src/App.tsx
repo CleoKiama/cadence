@@ -1,8 +1,7 @@
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import "./App.css";
-import { listen} from "@tauri-apps/api/event";
-
+import { listen } from "@tauri-apps/api/event";
 
 type DownloadProgress = {
 	url: string;
@@ -35,7 +34,7 @@ function App() {
 
 	return (
 		<main className="container">
-			<h1>Download Progress</h1>
+			<h1 className="text-blue-500 text-xl">Download Progress</h1>
 			<p>{progress}</p>
 			<button onClick={startDownload}>Start Download</button>
 		</main>
