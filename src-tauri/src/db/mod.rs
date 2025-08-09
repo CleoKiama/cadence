@@ -1,35 +1,44 @@
 use rusqlite::{Connection, Result};
-use std::path::Path;
+use std::sync::{Arc, Mutex};
 
 pub mod queries;
 
-pub fn init_db(path: &str) -> Result<Connection> {
-    let db_exists = Path::new(path).exists();
-    let conn = Connection::open(path)?;
+pub struct Db {
+    conn: Arc<Mutex<Connection>>,
+}
 
-    if !db_exists {
-        println!("Creating new SQLite database...");
+impl Db {
+    pub fn new(path: &str) -> Result<Self> {
+        let conn = Connection::open(path)?;
+        Ok(Db {
+            conn: Arc::new(Mutex::new(conn)),
+        })
     }
 
-    conn.execute_batch(
-        "
-        CREATE TABLE IF NOT EXISTS file_meta (
-            file_path TEXT PRIMARY KEY,
-            last_modified TEXT
-        );
+    pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
+        Arc::clone(&self.conn)
+    }
+    pub fn init_db(self) -> Result<()> {
+        let conn = self.conn.lock().unwrap();
+        conn.execute_batch(
+            "
+            CREATE TABLE IF NOT EXISTS file_meta (
+                file_path TEXT PRIMARY KEY,
+                last_modified TEXT
+            );
 
-        CREATE TABLE IF NOT EXISTS metrics (
-            file_path TEXT PRIMARY KEY,
-            name TEXT,
-            value INTEGER,
-            date TEXT
-        );
+            CREATE TABLE IF NOT EXISTS metrics (
+                file_path TEXT PRIMARY KEY,
+                name TEXT,
+                value INTEGER,
+                date TEXT
+            );
 
-        CREATE INDEX IF NOT EXISTS idx_date ON metrics(date);
-        CREATE INDEX IF NOT EXISTS idx_name ON metrics(name);
-        CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);
-        ",
-    )?;
-
-    Ok(conn)
+            CREATE INDEX IF NOT EXISTS idx_date ON metrics(date);
+            CREATE INDEX IF NOT EXISTS idx_name ON metrics(name);
+            CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);
+            ",
+        )?;
+        Ok(())
+    }
 }
