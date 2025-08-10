@@ -23,8 +23,6 @@ pub async fn init(db: Arc<Mutex<Connection>>) -> Result<(), anyhow::Error> {
     }
 
     println!("Watching for file changes in {}", root_dir);
-    file_watcher::watch_files(db.clone(), root_dir, &needed_metrics.metrics)
-        .await
-        .unwrap();
+    file_watcher::start_watcher(db.clone(), root_dir.to_string(), &needed_metrics.metrics).await?;
     Ok(())
 }

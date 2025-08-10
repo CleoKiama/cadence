@@ -3,19 +3,31 @@ use rusqlite::Connection;
 use std::{
     collections::HashSet,
     path::Path,
-    sync::{mpsc::channel, Arc, Mutex},
+    sync::{Arc, Mutex},
 };
+use tokio::sync::mpsc;
 
-pub async fn watch_files(
+pub async fn start_watcher(
     db: Arc<Mutex<Connection>>,
-    dir: &str,
+    dir: String,
     needed_metrics: &Vec<String>,
-) -> Result<()> {
-    let (tx, rx) = channel();
-    let mut watcher = recommended_watcher(tx)?;
-    watcher.watch(Path::new(dir), RecursiveMode::Recursive)?;
+) -> notify::Result<()> {
+    let (tx, mut rx) = mpsc::channel(100);
 
-    for res in rx {
+    // Blocking watcher task
+    tauri::async_runtime::spawn_blocking(move || {
+        move || -> notify::Result<()> {
+            let mut watcher = recommended_watcher(move |res| {
+                let _ = tx.blocking_send(res);
+            })?;
+            watcher.watch(Path::new(&dir), RecursiveMode::Recursive)?;
+            loop {
+                std::thread::park(); // Keep it alive
+            }
+        }
+    });
+
+    while let Some(res) = rx.recv().await {
         match res {
             Ok(event) => {
                 if let Err(e) = sync_data(event, db.clone(), needed_metrics).await {
@@ -25,6 +37,7 @@ pub async fn watch_files(
             Err(e) => eprintln!("watch error: {:?}", e),
         }
     }
+
     Ok(())
 }
 
@@ -42,7 +55,8 @@ pub async fn sync_data(
                     println!("Skipping already visited file: {}", file_path);
                     continue;
                 }
-                match super::read_journal::read_front_matter(file_path, needed_metrics, db.clone()).await
+                match super::read_journal::read_front_matter(file_path, needed_metrics, db.clone())
+                    .await
                 {
                     Ok(_) => println!("Successfully processed: {}", file_path),
                     Err(e) => eprintln!("Error processing {}: {}", file_path, e),
