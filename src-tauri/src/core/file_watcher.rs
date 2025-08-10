@@ -1,8 +1,13 @@
-use notify::{Event, RecursiveMode, Result, Watcher, recommended_watcher};
-use std::{collections::HashSet, path::Path, sync::mpsc::channel};
+use notify::{recommended_watcher, Event, RecursiveMode, Result, Watcher};
+use rusqlite::Connection;
+use std::{
+    collections::HashSet,
+    path::Path,
+    sync::{mpsc::channel, Arc, Mutex},
+};
 
-pub fn watch_files(
-    conn: &rusqlite::Connection,
+pub async fn watch_files(
+    db: Arc<Mutex<Connection>>,
     dir: &str,
     needed_metrics: &Vec<String>,
 ) -> Result<()> {
@@ -13,7 +18,7 @@ pub fn watch_files(
     for res in rx {
         match res {
             Ok(event) => {
-                if let Err(e) = sync_data(event, conn, needed_metrics) {
+                if let Err(e) = sync_data(event, db.clone(), needed_metrics).await {
                     eprintln!("Error syncing data: {}", e);
                 }
             }
@@ -23,9 +28,9 @@ pub fn watch_files(
     Ok(())
 }
 
-pub fn sync_data(
+pub async fn sync_data(
     event: Event,
-    conn: &rusqlite::Connection,
+    db: Arc<Mutex<Connection>>,
     needed_metrics: &Vec<String>,
 ) -> Result<()> {
     let mut visited_paths: HashSet<String> = HashSet::new();
@@ -35,9 +40,10 @@ pub fn sync_data(
             if let Some(file_path) = file_path {
                 if visited_paths.contains(file_path) {
                     println!("Skipping already visited file: {}", file_path);
-                    continue; // Skip already visited paths
+                    continue;
                 }
-                match super::read_journal::read_front_matter(file_path, needed_metrics, conn) {
+                match super::read_journal::read_front_matter(file_path, needed_metrics, db.clone()).await
+                {
                     Ok(_) => println!("Successfully processed: {}", file_path),
                     Err(e) => eprintln!("Error processing {}: {}", file_path, e),
                 }

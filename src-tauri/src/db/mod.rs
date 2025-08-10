@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 pub mod queries;
 
 pub struct Db {
-    conn: Arc<Mutex<Connection>>,
+    pub conn: Arc<Mutex<Connection>>,
 }
 
 impl Db {
@@ -16,11 +16,11 @@ impl Db {
     }
 
     pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
-        Arc::clone(&self.conn)
+        self.conn.clone()
     }
-    pub fn init_db(self) -> Result<()> {
-        let conn = self.conn.lock().unwrap();
-        conn.execute_batch(
+
+    pub fn init_db(&self) -> Result<()> {
+        self.conn.lock().unwrap().execute_batch(
             "
             CREATE TABLE IF NOT EXISTS file_meta (
                 file_path TEXT PRIMARY KEY,

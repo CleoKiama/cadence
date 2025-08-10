@@ -1,27 +1,23 @@
-use std::sync::{Arc, Mutex};
-
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use rusqlite::{params, Connection};
+use std::sync::{Arc, Mutex};
 use tokio;
 
-pub async fn read_dailies_dir(
-    dir_path: &str,
-    conn: &Arc<Mutex<Connection>>,
-) -> Result<Vec<String>, anyhow::Error> {
+pub async fn read_dailies_dir(dir_path: &str, db: Arc<Mutex<Connection>>) -> Result<Vec<String>, anyhow::Error> {
     let mut paths = Vec::new();
     let mut dir_entries = tokio::fs::read_dir(dir_path)
         .await
         .with_context(|| format!("Failed to read the directory: {}", dir_path))?;
     while let Some(entry) = dir_entries.next_entry().await? {
-        read_entry(entry, conn, &mut paths).await?;
+        read_entry(entry, db.clone(), &mut paths).await?;
     }
     Ok(paths)
 }
 
 async fn read_entry(
     dir_entry: tokio::fs::DirEntry,
-    conn: &Arc<Mutex<Connection>>,
+    db: Arc<Mutex<Connection>>,
     paths: &mut Vec<String>,
 ) -> Result<(), anyhow::Error> {
     let path = dir_entry.path();
@@ -40,7 +36,7 @@ async fn read_entry(
                 let datetime: DateTime<Utc> = metadata.into();
                 let formatted_time = datetime.format("%Y-%m-%d %H:%M:%S").to_string();
 
-                conn.lock().unwrap().execute(
+                db.lock().unwrap().execute(
                     "INSERT OR REPLACE INTO file_meta (file_path, last_modified) VALUES (?1, ?2)",
                     params![path.to_string_lossy().to_string(), formatted_time],
                 )

@@ -1,15 +1,13 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, NaiveDate, Utc};
-use rusqlite::Connection;
+use rusqlite::{params, Connection};
 use std::path::Path;
-use std::sync::Arc;
-use std::sync::Mutex;
+use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::fs::metadata;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
-use tokio::task;
 
 pub const DB_DATE_FORMAT: &str = "%Y-%m-%d";
 
@@ -24,9 +22,9 @@ pub struct Metric {
 pub async fn read_front_matter(
     path: &str,
     needed_metrics: &Vec<String>,
-    conn: &Arc<Mutex<Connection>>,
+    db: Arc<Mutex<Connection>>,
 ) -> Result<(), anyhow::Error> {
-    if !should_read_file(path, &conn.clone()).await? {
+    if !should_read_file(path, db.clone()).await? {
         return Ok(());
     }
 
@@ -47,11 +45,11 @@ pub async fn read_front_matter(
         for metric in needed_metrics {
             if line.starts_with(metric) {
                 let metric = extract_metric(&line, path)?;
-                write_metric_to_db(metric, &conn.clone())?;
+                write_metric_to_db(metric, db.clone())?;
             }
         }
     }
-    update_file_metadata(path, conn)?;
+    update_file_metadata(path, db)?;
     Ok(())
 }
 
@@ -83,7 +81,7 @@ fn extract_metric(line: &str, path: &str) -> Result<Metric> {
     }
 }
 
-async fn should_read_file(path: &str, conn: &Arc<Mutex<Connection>>) -> Result<bool> {
+async fn should_read_file(path: &str, db: Arc<Mutex<Connection>>) -> Result<bool> {
     let file_path = Path::new(path);
     if !file_path.exists() {
         return Ok(false);
@@ -98,36 +96,36 @@ async fn should_read_file(path: &str, conn: &Arc<Mutex<Connection>>) -> Result<b
     let last_modified_str = last_modified_time.format("%Y-%m-%d %H:%M:%S").to_string();
 
     // Check if file_meta entry exists and matches
-    let meta_matches: i64 = conn.lock().unwrap().query_row(
+    let meta_matches: i64 = db.lock().unwrap().query_row(
         "SELECT COUNT(*) FROM file_meta WHERE file_path = ?1 AND last_modified = ?2",
-        rusqlite::params![path, last_modified_str],
+        params![path, last_modified_str],
         |row| row.get(0),
     )?;
 
     // Check if file has any metrics stored
-    let metrics_exist: i64 = conn.lock().unwrap().query_row(
+    let metrics_exist: i64 = db.lock().unwrap().query_row(
         "SELECT COUNT(*) FROM metrics WHERE file_path = ?1",
-        rusqlite::params![path],
+        params![path],
         |row| row.get(0),
     )?;
 
     Ok(meta_matches == 0 || metrics_exist == 0)
 }
 
-pub fn write_metric_to_db(metrics: Metric, conn: &Arc<Mutex<Connection>>) -> Result<()> {
-    conn.lock().unwrap().execute(
+pub fn write_metric_to_db(metrics: Metric, db: Arc<Mutex<Connection>>) -> Result<()> {
+    let _ = db.lock().unwrap().execute(
         "INSERT OR REPLACE INTO metrics (file_path, name, value, date) VALUES (?1, ?2, ?3, ?4)",
-        rusqlite::params![
+        params![
             metrics.file_path,
             metrics.name,
             metrics.value,
             metrics.date.format(DB_DATE_FORMAT).to_string()
         ],
-    )?;
+    );
     Ok(())
 }
 
-fn update_file_metadata(path: &str, conn: &Arc<Mutex<Connection>>) -> Result<()> {
+fn update_file_metadata(path: &str, db: Arc<Mutex<Connection>>) -> Result<()> {
     let file_path = Path::new(path);
     let last_modified: SystemTime = file_path
         .metadata()
@@ -137,9 +135,9 @@ fn update_file_metadata(path: &str, conn: &Arc<Mutex<Connection>>) -> Result<()>
     let last_modified_time: DateTime<Utc> = last_modified.into();
     let last_modified_str = last_modified_time.format("%Y-%m-%d %H:%M:%S").to_string();
 
-    conn.lock().unwrap().execute(
+    db.lock().unwrap().execute(
         "INSERT OR REPLACE INTO file_meta (file_path, last_modified) VALUES (?1, ?2)",
-        rusqlite::params![path, last_modified_str],
+        params![path, last_modified_str],
     )?;
 
     Ok(())
