@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 
 pub mod metrics;
 pub mod streaks;
+pub mod heatmap;
 
 pub struct Db {
     pub conn: Arc<Mutex<Connection>>,
