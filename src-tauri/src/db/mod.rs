@@ -34,8 +34,6 @@ impl Db {
                 date TEXT
             );
 
-            CREATE INDEX IF NOT EXISTS idx_date ON metrics(date);
-            CREATE INDEX IF NOT EXISTS idx_name ON metrics(name);
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);
             ",
         )?;
