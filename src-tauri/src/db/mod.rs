@@ -1,7 +1,8 @@
 use rusqlite::{Connection, Result};
 use std::sync::{Arc, Mutex};
 
-pub mod queries;
+pub mod metrics;
+pub mod streaks;
 
 pub struct Db {
     pub conn: Arc<Mutex<Connection>>,
