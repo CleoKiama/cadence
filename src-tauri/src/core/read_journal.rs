@@ -10,6 +10,7 @@ use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
 
 pub const DB_DATE_FORMAT: &str = "%Y-%m-%d";
+pub const DB_DATE_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
 
 #[derive(Debug)]
 pub struct Metric {
@@ -93,7 +94,7 @@ async fn should_read_file(path: &str, db: Arc<Mutex<Connection>>) -> Result<bool
         .map_err(|e| anyhow::anyhow!("Failed to get metadata for {}: {}", path, e))?;
 
     let last_modified_time: DateTime<Utc> = last_modified.into();
-    let last_modified_str = last_modified_time.format("%Y-%m-%d %H:%M:%S").to_string();
+    let last_modified_str = last_modified_time.format(DB_DATE_TIME_FORMAT).to_string();
 
     // Check if file_meta entry exists and matches
     let meta_matches: i64 = db.lock().unwrap().query_row(
@@ -133,7 +134,7 @@ fn update_file_metadata(path: &str, db: Arc<Mutex<Connection>>) -> Result<()> {
         .map_err(|e| anyhow::anyhow!("Failed to get metadata for {}: {}", path, e))?;
 
     let last_modified_time: DateTime<Utc> = last_modified.into();
-    let last_modified_str = last_modified_time.format("%Y-%m-%d %H:%M:%S").to_string();
+    let last_modified_str = last_modified_time.format(DB_DATE_TIME_FORMAT).to_string();
 
     db.lock().unwrap().execute(
         "INSERT OR REPLACE INTO file_meta (file_path, last_modified) VALUES (?1, ?2)",
