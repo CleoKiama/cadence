@@ -59,7 +59,14 @@ fn get_summary_metric(
         metrics::get_monthly_metric_total(conn, habit_name).map_err(|e| e.to_string())?;
 
     let display_name = habit_name.to_string(); //HACK: Placeholder for display name logic
-    let last_updated = "2023-10-01".to_string(); //HACK: Placeholder for last updated logic
+    let conn = conn.lock().unwrap();
+    let mut stmt = conn
+        .prepare("SELECT updated_at FROM metrics WHERE name = ?1 ORDER BY updated_at DESC LIMIT 1")
+        .map_err(|e| e.to_string())?;
+    let last_updated: String = stmt
+        .query_one([habit_name], |row| row.get(0))
+        .map_err(|e| e.to_string())?;
+
     let trend = Trend::Stable; //HACK: Placeholder for trend logic
 
     Ok(DashboardMetrics {
@@ -76,7 +83,7 @@ fn get_summary_metric(
 
 fn get_all_habits(conn: &Arc<Mutex<Connection>>) -> Result<Vec<String>, rusqlite::Error> {
     let conn = conn.lock().unwrap();
-    let mut stmt = conn.prepare("SELECT name FROM metrics")?;
+    let mut stmt = conn.prepare("SELECT DISTINCT name FROM metrics")?;
     let habit_iter = stmt.query_map([], |row| row.get(0))?;
 
     let mut habits = Vec::new();
