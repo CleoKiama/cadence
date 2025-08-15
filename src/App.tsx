@@ -1,43 +1,63 @@
-import { useEffect, useState } from "react";
-import { invoke } from "@tauri-apps/api/core";
+import { useState } from "react";
+import { ViewMode } from "./types/navigation";
+import { ThemeProvider } from "./hooks/useTheme";
+import { useMetrics } from "./hooks/useMetrics";
+import { AppShell } from "./components/layout/AppShell";
+import { Dashboard } from "./pages/Dashboard";
+import { Analytics } from "./pages/Analytics";
+import { SettingsPage } from "./pages/SettingsPage";
+import { LoadingSpinner } from "./components/shared/LoadingSpinner";
 import "./App.css";
-import { listen } from "@tauri-apps/api/event";
-
-type DownloadProgress = {
-	url: string;
-	progress: number;
-};
 
 function App() {
-	const [progress, setProgress] = useState<number>(0);
+	const [activeView, setActiveView] = useState<ViewMode>("dashboard");
+	const { summary, chartData, heatmapData, loading } = useMetrics();
 
-	useEffect(() => {
-		let unListen = listen<DownloadProgress>("download-progress", (event) => {
-			console.log(
-				`downloading ${event.payload.progress} bytes from ${event.payload.url}`,
+	const renderCurrentView = () => {
+		if (loading) {
+			return (
+				<div className="flex items-center justify-center h-64">
+					<LoadingSpinner size="lg" />
+				</div>
 			);
-			setProgress(event.payload.progress);
-		});
-
-		return () => {
-			unListen.then((unlisten) => unlisten());
-		};
-	}, [progress]);
-
-	async function startDownload() {
-		try {
-			void invoke<string>("start_download");
-		} catch (error) {
-			console.error("Error starting the download", error);
 		}
-	}
+
+		switch (activeView) {
+			case "dashboard":
+				return (
+					<Dashboard
+						metrics={summary}
+						chartData={chartData}
+						habitName="dsa_problems_solved"
+					/>
+				);
+			case "analytics":
+				return (
+					<Analytics
+						metrics={summary}
+						chartData={chartData}
+						heatmapData={heatmapData}
+					/>
+				);
+			case "settings":
+				return <SettingsPage metrics={summary} />;
+			default:
+				return (
+					<Dashboard
+						metrics={summary}
+						chartData={chartData}
+						habitName="dsa_problems_solved"
+					/>
+				);
+		}
+	};
 
 	return (
-		<main className="container">
-			<h1 className="text-blue-500 text-xl">Download Progress</h1>
-			<p>{progress}</p>
-			<button onClick={startDownload}>Start Download</button>
-		</main>
+		<ThemeProvider>
+			<AppShell activeView={activeView} onViewChange={setActiveView}>
+				{renderCurrentView()}
+			</AppShell>
+		</ThemeProvider>
 	);
 }
 

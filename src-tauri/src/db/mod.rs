@@ -1,9 +1,9 @@
 use rusqlite::{Connection, Result};
 use std::sync::{Arc, Mutex};
 
+pub mod heatmap;
 pub mod metrics;
 pub mod streaks;
-pub mod heatmap;
 
 pub struct Db {
     pub conn: Arc<Mutex<Connection>>,
@@ -31,7 +31,7 @@ impl Db {
 
             CREATE TABLE IF NOT EXISTS metrics (
                 file_path TEXT PRIMARY KEY,
-                name TEXT,
+                name TEXT NOT NULL UNIQUE,
                 value INTEGER,
                 date TEXT
             );

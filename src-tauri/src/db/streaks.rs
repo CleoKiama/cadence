@@ -99,8 +99,6 @@ pub fn get_longest_habit_streak(
             } else {
                 current_streak = 1;
             }
-        } else {
-            current_streak = 1;
         }
     }
 
@@ -332,4 +330,3 @@ mod tests {
         assert_eq!(longest_streak, 1);
     }
 }
-
