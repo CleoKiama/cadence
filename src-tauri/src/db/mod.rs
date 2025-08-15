@@ -3,6 +3,7 @@ use std::sync::{Arc, Mutex};
 
 pub mod heatmap;
 pub mod metrics;
+pub mod seed;
 pub mod streaks;
 
 pub struct Db {
@@ -30,11 +31,12 @@ impl Db {
             );
 
             CREATE TABLE IF NOT EXISTS metrics (
-                file_path TEXT PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE,
+                file_path TEXT NOT NULL,
+                name TEXT NOT NULL,
                 value INTEGER,
                 date TEXT,
-                updated_at TEXT
+                updated_at TEXT,
+                PRIMARY KEY (file_path, name)
             );
 
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);

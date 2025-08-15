@@ -37,11 +37,16 @@ pub fn run() {
             tauri::async_runtime::spawn({
                 let db_clone = db.get_connection();
                 async move {
-                    if let Err(e) = core::init(db_clone).await {
+                    if let Err(e) = core::init(db_clone.clone()).await {
                         eprintln!("Error during core initialization: {}", e);
                     }
                     if seed_database {
                         println!("Seeding database here...");
+                        if let Err(e) = db::seed::seed_development_data(db_clone) {
+                            eprintln!("Error seeding database: {}", e);
+                        } else {
+                            println!("Database seeded successfully!");
+                        }
                     }
                 }
             });
