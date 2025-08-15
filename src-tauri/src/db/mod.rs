@@ -33,7 +33,8 @@ impl Db {
                 file_path TEXT PRIMARY KEY,
                 name TEXT NOT NULL UNIQUE,
                 value INTEGER,
-                date TEXT
+                date TEXT,
+                updated_at TEXT
             );
 
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);

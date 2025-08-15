@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use chrono::{DateTime, NaiveDate, Utc};
+use chrono::{DateTime, Local, NaiveDate, Utc};
 use rusqlite::{params, Connection};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
@@ -115,12 +115,13 @@ async fn should_read_file(path: &str, db: Arc<Mutex<Connection>>) -> Result<bool
 
 pub fn write_metric_to_db(metrics: Metric, db: Arc<Mutex<Connection>>) -> Result<()> {
     let _ = db.lock().unwrap().execute(
-        "INSERT OR REPLACE INTO metrics (file_path, name, value, date) VALUES (?1, ?2, ?3, ?4)",
+        "INSERT OR REPLACE INTO metrics (file_path, name, value, date,updated_at) VALUES (?1, ?2, ?3, ?4)",
         params![
             metrics.file_path,
             metrics.name,
             metrics.value,
-            metrics.date.format(DB_DATE_FORMAT).to_string()
+            metrics.date.format(DB_DATE_FORMAT).to_string(),
+            Local::now().format(DB_DATE_TIME_FORMAT).to_string()
         ],
     );
     Ok(())
