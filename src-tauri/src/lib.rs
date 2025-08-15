@@ -1,3 +1,5 @@
+use std::env;
+
 use tauri::Manager;
 
 mod commands;
@@ -8,11 +10,22 @@ use commands::dashboard::*;
 use commands::streaks::*;
 use commands::test::*;
 use db::Db;
+use dotenvy::dotenv;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    if let Err(e) = dotenv() {
+        eprintln!("Warning: Could not load .env file: {}", e);
+    }
+    let mut seed_database = false;
+    if let Ok(seed_env) = env::var("DB_SEED") {
+        if seed_env == "true" {
+            println!("Seeding database as per environment variable DB_SEED=true");
+            seed_database = true;
+        }
+    }
     tauri::Builder::default()
-        .setup(|app| {
+        .setup(move |app| {
             println!("initializing the database");
             //TODO: update the database path as needed later
             let db = Db::new("/tmp/habitron.db")?;
@@ -26,6 +39,9 @@ pub fn run() {
                 async move {
                     if let Err(e) = core::init(db_clone).await {
                         eprintln!("Error during core initialization: {}", e);
+                    }
+                    if seed_database {
+                        println!("Seeding database here...");
                     }
                 }
             });
