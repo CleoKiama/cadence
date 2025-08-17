@@ -12,6 +12,8 @@ use commands::test::*;
 use db::Db;
 use dotenvy::dotenv;
 
+use crate::commands::recent_activity::get_recent_activity;
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     if let Err(e) = dotenv() {
@@ -58,7 +60,8 @@ pub fn run() {
             get_current_streak,
             get_longest_streak,
             test_command,
-            get_dashboard_metrics
+            get_dashboard_metrics,
+            get_recent_activity,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

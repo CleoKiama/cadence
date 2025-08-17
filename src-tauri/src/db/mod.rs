@@ -5,6 +5,7 @@ pub mod heatmap;
 pub mod metrics;
 pub mod seed;
 pub mod streaks;
+pub mod utils;
 
 pub struct Db {
     pub conn: Arc<Mutex<Connection>>,
@@ -34,9 +35,9 @@ impl Db {
                 file_path TEXT NOT NULL,
                 name TEXT NOT NULL,
                 value INTEGER,
-                date TEXT,
+                date TEXT NOT NULL,
                 updated_at TEXT,
-                PRIMARY KEY (file_path, name)
+                PRIMARY KEY (file_path, name, date)
             );
 
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);
