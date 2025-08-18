@@ -1,7 +1,6 @@
 use rusqlite::{Connection, Result};
 use std::sync::{Arc, Mutex};
 
-pub mod heatmap;
 pub mod metrics;
 pub mod seed;
 pub mod streaks;
