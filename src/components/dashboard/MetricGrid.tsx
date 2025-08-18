@@ -17,10 +17,9 @@ const MetricSummarySchema = z.object({
 const MetricGridSchema = z.array(MetricSummarySchema);
 
 export type MetricSummary = z.infer<typeof MetricSummarySchema>;
-export type MetricGridProps = z.infer<typeof MetricGridSchema>;
 
 export const MetricGrid = () => {
-	const [metrics, setMetrics] = useState<MetricGridProps>([]);
+	const [metrics, setMetrics] = useState<MetricSummary[]>([]);
 
 	useEffect(() => {
 		const result = invoke("get_dashboard_metrics");
@@ -40,10 +39,15 @@ export const MetricGrid = () => {
 	}, []);
 
 	return (
-		<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-			{metrics.map((metric) => (
-				<MetricCard {...metric} />
-			))}
+		<div>
+			<h2 className="text-xl font-semibold mb-6 text-[var(--color-foreground)]">
+				Your Habits
+			</h2>
+			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+				{metrics.map((metric) => (
+					<MetricCard {...metric} />
+				))}
+			</div>
 		</div>
 	);
 };

@@ -336,4 +336,3 @@ mod tests {
         assert_eq!(reading_data[0].value, 0); // Other days should be 0
     }
 }
-
