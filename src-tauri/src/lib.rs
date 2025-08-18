@@ -9,7 +9,6 @@ mod db;
 use commands::analytics::*;
 use commands::dashboard::*;
 use commands::streaks::*;
-use commands::test::*;
 use db::Db;
 use dotenvy::dotenv;
 
@@ -60,12 +59,10 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             get_current_streak,
             get_longest_streak,
-            test_command,
             get_dashboard_metrics,
             get_recent_activity,
             get_analytics_heatmap_data,
             get_all_analytics_data,
-            get_analytics_summary,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
