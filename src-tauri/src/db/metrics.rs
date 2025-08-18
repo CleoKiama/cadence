@@ -3,10 +3,10 @@ use std::sync::{Arc, Mutex};
 use anyhow::Context;
 use chrono::{Datelike, Days, Local, NaiveDate, Weekday};
 use rusqlite::{params, Connection};
-use serde::Serialize;
 
 use crate::{
-    commands::analytics::ChartDataPoint, core::read_journal::DB_DATE_FORMAT,
+    commands::analytics::{ChartDataPoint, HeatmapPoint},
+    core::read_journal::DB_DATE_FORMAT,
     db::utils::get_all_habits,
 };
 
@@ -89,13 +89,6 @@ pub fn get_monthly_metric_total(
         .map_err(|e| anyhow::anyhow!(e))
 }
 
-#[derive(Debug, Serialize)]
-pub struct HeatmapDataPoint {
-    pub date: String,
-    pub count: i64,
-    pub level: u8, // 0-4 for intensity levels
-}
-
 fn get_habit_trend_data(
     conn: &Arc<Mutex<Connection>>,
     habit_name: &str,
@@ -158,7 +151,7 @@ pub fn get_habit_heatmap_data(
     conn: &Arc<Mutex<Connection>>,
     habit_name: &str,
     days: u32,
-) -> Result<Vec<HeatmapDataPoint>, anyhow::Error> {
+) -> Result<Vec<HeatmapPoint>, anyhow::Error> {
     let trend_data = get_habit_trend_data(conn, habit_name, days)?;
 
     // Find max value to calculate intensity levels
@@ -175,7 +168,7 @@ pub fn get_habit_heatmap_data(
                 ((ratio * 3.0).ceil() as u8 + 1).min(4)
             };
 
-            HeatmapDataPoint {
+            HeatmapPoint {
                 date: point.date,
                 count: point.value,
                 level,

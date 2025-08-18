@@ -80,7 +80,7 @@ pub fn get_longest_habit_streak(
     }
 
     if dates.is_empty() {
-        return Ok(0);
+        return Ok(0); // No entries found, return 0
     }
 
     let mut longest_streak = 1;
@@ -113,7 +113,7 @@ mod tests {
 
     use crate::{
         core::read_journal::{Metric, DB_DATE_FORMAT},
-        db::Db,
+        db::{seed::insert_metric, Db},
     };
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -132,32 +132,31 @@ mod tests {
         Ok(db)
     }
 
-    fn seed_database(conn: Arc<Mutex<Connection>>) -> Result<(), anyhow::Error> {
-        let conn = conn.lock().unwrap();
+    fn seed_test_data(
+        conn: Arc<Mutex<Connection>>,
+        metric_name: &str,
+        days: i32,
+    ) -> Result<(), anyhow::Error> {
         let current_date = Local::now().date_naive();
-        for i in 0..=MAX_DATE {
+        for i in 0..=days {
             let value: u32 = rng().random_range(1..=10);
             let days_back = i as u64;
             let date = current_date
                 .checked_sub_days(Days::new(days_back))
                 .ok_or_else(|| anyhow::anyhow!("Invalid date for seeding"))?;
             let metric = Metric {
-                file_path: format!("file_{}.md", i),
-                name: METRIC_NAME.to_string(),
+                file_path: format!("test_file_{}.md", date.format("%Y-%m-%d")),
+                name: metric_name.to_string(),
                 value,
                 date,
             };
-            conn.execute(
-                "INSERT INTO metrics(file_path,name,value,date) values (?1, ?2, ?3, ?4)",
-                params![
-                    metric.file_path,
-                    metric.name,
-                    metric.value,
-                    metric.date.format("%Y-%m-%d").to_string()
-                ],
-            )?;
+            insert_metric(&conn, &metric)?;
         }
         Ok(())
+    }
+
+    fn seed_database(conn: Arc<Mutex<Connection>>) -> Result<(), anyhow::Error> {
+        seed_test_data(conn, METRIC_NAME, MAX_DATE)
     }
 
     #[test]
