@@ -1,8 +1,8 @@
 use std::env;
 use std::sync::Mutex;
 
-use tauri::Manager;
 use rusqlite::Connection;
+use tauri::Manager;
 
 mod commands;
 mod core;
@@ -56,7 +56,7 @@ pub fn run() {
                 async move {
                     // Get journal path from settings
                     let db_state = app_handle.state::<DbConnection>();
-                    let journal_path = match get_journal_files_path(&*db_state) {
+                    let journal_path = match get_journal_files_path(&db_state) {
                         Ok(path) => path,
                         Err(e) => {
                             eprintln!("Error getting journal path from settings: {}", e);
@@ -76,7 +76,7 @@ pub fn run() {
                     if seed_database {
                         println!("Seeding database here...");
                         let db_state = app_handle.state::<DbConnection>();
-                        if let Err(e) = db::seed::seed_development_data(&*db_state) {
+                        if let Err(e) = db::seed::seed_development_data(&db_state) {
                             eprintln!("Error seeding database: {}", e);
                         } else {
                             println!("Database seeded successfully!");

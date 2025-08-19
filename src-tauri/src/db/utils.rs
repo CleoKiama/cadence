@@ -14,15 +14,13 @@ pub fn get_all_habits(db: &DbConnection) -> Result<Vec<String>, rusqlite::Error>
 }
 
 pub fn get_journal_files_path(db: &DbConnection) -> Result<Option<String>, anyhow::Error> {
-    use rusqlite::params;
-
     let conn = db
         .lock()
         .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
 
     let mut stmt = conn.prepare("SELECT value FROM journals_files_path")?;
 
-    match stmt.query_row(params!["journal_files_path"], |row| row.get(0)) {
+    match stmt.query_row([], |row| row.get(0)) {
         Ok(path) => Ok(Some(path)),
         Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
         Err(e) => Err(anyhow::anyhow!("Failed to get journal files path: {}", e)),

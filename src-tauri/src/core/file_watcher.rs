@@ -83,14 +83,17 @@ pub async fn start_watcher(
 
 pub async fn sync_data(event: Event, app_handle: AppHandle) -> Result<()> {
     let mut visited_paths: HashSet<String> = HashSet::new();
-    let needed_metrics = Vec::from([
-        "dsa_problems_solved",
-        "exercise",
-        "reading",
-        "study",
-        "workout",
-    ]);
     let db = app_handle.state::<DbConnection>();
+    
+    // Get tracked metrics from database
+    let tracked_metrics = super::get_tracked_metrics_from_db(&db)
+        .map_err(|e| anyhow::anyhow!("Failed to get tracked metrics: {}", e))?;
+    
+    if tracked_metrics.is_empty() {
+        return Ok(());
+    }
+    
+    let needed_metrics: Vec<&str> = tracked_metrics.iter().map(|s| s.as_str()).collect();
     
     for path in event.paths {
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {

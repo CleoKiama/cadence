@@ -4,7 +4,11 @@ use chrono::{Local, NaiveDate};
 use serde::Serialize;
 
 use crate::{
-    core::read_journal::DB_DATE_TIME_FORMAT, db::utils::get_journal_files_path, DbConnection,
+    core::read_journal::DB_DATE_TIME_FORMAT, 
+    core::resync_database,
+    core::file_watcher::WatchCommand,
+    db::utils::get_journal_files_path, 
+    DbConnection,
     WatcherState,
 };
 
@@ -38,7 +42,7 @@ pub fn get_settings(db: tauri::State<'_, DbConnection>) -> Result<Settings, Stri
 #[tauri::command]
 pub async fn set_journal_files_path(
     db: tauri::State<'_, DbConnection>,
-    _watcher: tauri::State<'_, WatcherState>,
+    watcher: tauri::State<'_, WatcherState>,
     path: &str,
 ) -> Result<(), String> {
     // Validate path exists and is accessible
@@ -54,6 +58,9 @@ pub async fn set_journal_files_path(
         return Err("Path must be a directory".to_string());
     }
 
+    // Get previous journal path before updating
+    let previous_path = get_journal_files_path(&db).map_err(|e| e.to_string())?;
+
     // Save to database
     {
         let conn = db
@@ -65,6 +72,31 @@ pub async fn set_journal_files_path(
 
         stmt.execute([path])
             .map_err(|e| format!("Failed to set journal files path: {}", e))?;
+    }
+
+    // Resync database with new path
+    resync_database(&db, path).await.map_err(|e| format!("Failed to resync database: {}", e))?;
+
+    // Unwatch previous path if it exists
+    if let Some(prev_path) = previous_path {
+        let sender_opt = {
+            let sender_guard = watcher.lock().map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
+            sender_guard.clone()
+        };
+        if let Some(sender) = sender_opt {
+            sender.send(WatchCommand::Unwatch(prev_path)).await
+                .map_err(|e| format!("Failed to send unwatch command: {}", e))?;
+        }
+    }
+
+    // Watch new path
+    let sender_opt = {
+        let sender_guard = watcher.lock().map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
+        sender_guard.clone()
+    };
+    if let Some(sender) = sender_opt {
+        sender.send(WatchCommand::Watch(path.to_string())).await
+            .map_err(|e| format!("Failed to send watch command: {}", e))?;
     }
 
     println!("path: {:#?}", path);
