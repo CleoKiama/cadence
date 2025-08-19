@@ -24,6 +24,9 @@ pub fn seed_development_data(db: &DbConnection) -> Result<(), anyhow::Error> {
     )?;
     seed_recent_habit(db, "water_glasses", 14, 0.9)?;
 
+    // Seed tracked metrics
+    seed_tracked_metrics(db)?;
+
     println!("Development data seeded successfully!");
     Ok(())
 }
@@ -229,5 +232,25 @@ pub fn insert_metric(db: &DbConnection, metric: &Metric) -> Result<(), anyhow::E
             Local::now().format(DB_DATE_TIME_FORMAT).to_string()
         ],
     )?;
+    Ok(())
+}
+
+fn seed_tracked_metrics(db: &DbConnection) -> Result<(), anyhow::Error> {
+    let metrics = vec![
+        "exercise",
+        "meditation", 
+        "dsa_solved",
+        "pages_read",
+        "journal_words",
+        "water_glasses"
+    ];
+    
+    let conn = db.lock().unwrap();
+    for metric in metrics {
+        conn.execute(
+            "INSERT OR IGNORE INTO tracked_metrics (value) VALUES (?1)",
+            params![metric],
+        )?;
+    }
     Ok(())
 }

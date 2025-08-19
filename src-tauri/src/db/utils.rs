@@ -2,7 +2,7 @@ use crate::DbConnection;
 
 pub fn get_all_habits(db: &DbConnection) -> Result<Vec<String>, rusqlite::Error> {
     let conn = db.lock().unwrap();
-    let mut stmt = conn.prepare("SELECT DISTINCT name FROM metrics")?;
+    let mut stmt = conn.prepare("SELECT DISTINCT m.name FROM metrics m LEFT JOIN tracked_metrics tm ON m.name = tm.value WHERE tm.value IS NOT NULL")?;
     let habit_iter = stmt.query_map([], |row| row.get(0))?;
 
     let mut habits = Vec::new();
@@ -13,16 +13,14 @@ pub fn get_all_habits(db: &DbConnection) -> Result<Vec<String>, rusqlite::Error>
     Ok(habits)
 }
 
-pub fn get_journal_files_path(
-    db: &DbConnection,
-) -> Result<Option<String>, anyhow::Error> {
+pub fn get_journal_files_path(db: &DbConnection) -> Result<Option<String>, anyhow::Error> {
     use rusqlite::params;
 
     let conn = db
         .lock()
         .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
 
-    let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
+    let mut stmt = conn.prepare("SELECT value FROM journals_files_path")?;
 
     match stmt.query_row(params!["journal_files_path"], |row| row.get(0)) {
         Ok(path) => Ok(Some(path)),

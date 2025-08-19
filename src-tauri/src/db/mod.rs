@@ -36,9 +36,12 @@ impl Db {
                 PRIMARY KEY (file_path, name, date)
             );
 
-            CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT
+            CREATE TABLE IF NOT EXISTS tracked_metrics (
+                value TEXT PRIMARY KEY
+            );
+
+            CREATE TABLE IF NOT EXISTS journals_files_path (
+                value TEXT PRIMARY KEY
             );
 
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);

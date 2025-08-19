@@ -3,9 +3,10 @@ use std::path::Path;
 use chrono::{Local, NaiveDate};
 use serde::Serialize;
 
-use crate::{core::read_journal::DB_DATE_TIME_FORMAT, db::utils::get_journal_files_path, DbConnection, WatcherState};
-
-const JOURNAL_FILES_PATH_KEY: &str = "journal_files_path";
+use crate::{
+    core::read_journal::DB_DATE_TIME_FORMAT, db::utils::get_journal_files_path, DbConnection,
+    WatcherState,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -24,9 +25,7 @@ pub struct Settings {
 }
 
 #[tauri::command]
-pub fn get_settings(
-    db: tauri::State<'_, DbConnection>,
-) -> Result<Settings, String> {
+pub fn get_settings(db: tauri::State<'_, DbConnection>) -> Result<Settings, String> {
     let tracked_metrics = get_tracked_metrics(&db).map_err(|e| e.to_string())?;
     let journal_files_path = get_journal_files_path(&db).map_err(|e| e.to_string())?;
 
@@ -61,10 +60,10 @@ pub async fn set_journal_files_path(
             .lock()
             .map_err(|e| format!("Failed to lock connection: {}", e))?;
         let mut stmt = conn
-            .prepare("INSERT OR REPLACE INTO settings (key, value) VALUES (?1, ?2)")
+            .prepare("INSERT OR REPLACE INTO journals_files_path (value) VALUES (?1)")
             .map_err(|e| format!("Failed to prepare statement: {}", e))?;
 
-        stmt.execute([JOURNAL_FILES_PATH_KEY, path])
+        stmt.execute([path])
             .map_err(|e| format!("Failed to set journal files path: {}", e))?;
     }
 
@@ -73,9 +72,7 @@ pub async fn set_journal_files_path(
     Ok(())
 }
 
-fn get_tracked_metrics(
-    db: &DbConnection,
-) -> Result<Option<Vec<TrackedMetric>>, anyhow::Error> {
+fn get_tracked_metrics(db: &DbConnection) -> Result<Option<Vec<TrackedMetric>>, anyhow::Error> {
     let conn = db
         .lock()
         .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
@@ -83,6 +80,7 @@ fn get_tracked_metrics(
     let mut stmt = conn.prepare(
         "SELECT name, updated_at, COUNT(*) as entries 
          FROM metrics 
+         left join tracked_metrics on tracked_metrics.value = metrics.name
          GROUP BY name 
          ORDER BY updated_at DESC",
     )?;
