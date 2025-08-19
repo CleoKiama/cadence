@@ -1,5 +1,5 @@
-import { MetricConfiguration } from "../components/settings/MetricConfiguration";
-import { About } from "../components/settings/About";
+import { MetricConfiguration } from "#/components/settings/MetricConfiguration";
+import { About } from "#/components/settings/About";
 
 export const SettingsPage = () => {
 	return (
@@ -22,4 +22,3 @@ export const SettingsPage = () => {
 		</div>
 	);
 };
-

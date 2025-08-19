@@ -31,6 +31,7 @@ export const MetricGrid = () => {
 					console.log("Response data:", res);
 					return;
 				}
+				console.log("parseResult", parseResult);
 				setMetrics(parseResult.data);
 			})
 			.catch((error) => {
@@ -44,8 +45,8 @@ export const MetricGrid = () => {
 				Your Habits
 			</h2>
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-				{metrics.map((metric) => (
-					<MetricCard {...metric} />
+				{metrics.map((metric, i) => (
+					<MetricCard key={i} {...metric} />
 				))}
 			</div>
 		</div>

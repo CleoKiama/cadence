@@ -14,3 +14,21 @@ pub fn get_all_habits(conn: &Arc<Mutex<Connection>>) -> Result<Vec<String>, rusq
 
     Ok(habits)
 }
+
+pub fn get_journal_files_path(
+    conn: &std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>,
+) -> Result<Option<String>, anyhow::Error> {
+    use rusqlite::params;
+
+    let conn = conn
+        .lock()
+        .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
+
+    let mut stmt = conn.prepare("SELECT value FROM settings WHERE key = ?1")?;
+
+    match stmt.query_row(params!["journal_files_path"], |row| row.get(0)) {
+        Ok(path) => Ok(Some(path)),
+        Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+        Err(e) => Err(anyhow::anyhow!("Failed to get journal files path: {}", e)),
+    }
+}

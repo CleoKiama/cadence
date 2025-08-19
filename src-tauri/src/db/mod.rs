@@ -39,6 +39,11 @@ impl Db {
                 PRIMARY KEY (file_path, name, date)
             );
 
+            CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT
+            );
+
             CREATE INDEX IF NOT EXISTS idx_file ON metrics(file_path);
             ",
         )?;
