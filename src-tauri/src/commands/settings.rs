@@ -1,13 +1,9 @@
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 
 use chrono::{Local, NaiveDate};
-use rusqlite::Connection;
 use serde::Serialize;
 
-use crate::core::read_journal::DB_DATE_TIME_FORMAT;
-use crate::db::utils::get_journal_files_path;
-use crate::Watcher;
+use crate::{core::read_journal::DB_DATE_TIME_FORMAT, db::utils::get_journal_files_path, DbConnection, WatcherState};
 
 const JOURNAL_FILES_PATH_KEY: &str = "journal_files_path";
 
@@ -29,10 +25,10 @@ pub struct Settings {
 
 #[tauri::command]
 pub fn get_settings(
-    state: tauri::State<'_, Arc<Mutex<rusqlite::Connection>>>,
+    db: tauri::State<'_, DbConnection>,
 ) -> Result<Settings, String> {
-    let tracked_metrics = get_tracked_metrics(&state).map_err(|e| e.to_string())?;
-    let journal_files_path = get_journal_files_path(&state).map_err(|e| e.to_string())?;
+    let tracked_metrics = get_tracked_metrics(&db).map_err(|e| e.to_string())?;
+    let journal_files_path = get_journal_files_path(&db).map_err(|e| e.to_string())?;
 
     Ok(Settings {
         tracked_metrics,
@@ -42,8 +38,8 @@ pub fn get_settings(
 
 #[tauri::command]
 pub async fn set_journal_files_path(
-    state: tauri::State<'_, Arc<Mutex<rusqlite::Connection>>>,
-    watch_command: tauri::State<'_, Watcher>,
+    db: tauri::State<'_, DbConnection>,
+    _watcher: tauri::State<'_, WatcherState>,
     path: &str,
 ) -> Result<(), String> {
     // Validate path exists and is accessible
@@ -61,7 +57,7 @@ pub async fn set_journal_files_path(
 
     // Save to database
     {
-        let conn = state
+        let conn = db
             .lock()
             .map_err(|e| format!("Failed to lock connection: {}", e))?;
         let mut stmt = conn
@@ -78,9 +74,9 @@ pub async fn set_journal_files_path(
 }
 
 fn get_tracked_metrics(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
 ) -> Result<Option<Vec<TrackedMetric>>, anyhow::Error> {
-    let conn = conn
+    let conn = db
         .lock()
         .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
 

@@ -1,12 +1,12 @@
 use anyhow::Result;
 use notify::{recommended_watcher, Event, RecursiveMode, Watcher};
-use rusqlite::Connection;
 use std::{
     collections::HashSet,
     path::Path,
-    sync::{Arc, Mutex},
 };
-use tauri::async_runtime::{channel, Sender};
+use tauri::{async_runtime::{channel, Sender}, AppHandle, Manager};
+
+use crate::DbConnection;
 
 #[derive(Debug)]
 pub enum WatchCommand {
@@ -16,7 +16,7 @@ pub enum WatchCommand {
 }
 
 pub async fn start_watcher(
-    db: Arc<Mutex<Connection>>,
+    app_handle: AppHandle,
     dir: Option<String>,
 ) -> notify::Result<Sender<WatchCommand>> {
     let (event_tx, mut event_rx) = channel(100);
@@ -64,12 +64,12 @@ pub async fn start_watcher(
     });
 
     // Event handler task
-    let db_clone = db.clone();
+    let app_handle_clone = app_handle.clone();
     tokio::spawn(async move {
         while let Some(event) = event_rx.recv().await {
             match event {
                 Ok(event) => {
-                    if let Err(e) = sync_data(event, db_clone.clone()).await {
+                    if let Err(e) = sync_data(event, app_handle_clone.clone()).await {
                         eprintln!("Error syncing data: {e}");
                     }
                 }
@@ -81,7 +81,7 @@ pub async fn start_watcher(
     Ok(cmd_tx)
 }
 
-pub async fn sync_data(event: Event, db: Arc<Mutex<Connection>>) -> Result<()> {
+pub async fn sync_data(event: Event, app_handle: AppHandle) -> Result<()> {
     let mut visited_paths: HashSet<String> = HashSet::new();
     let needed_metrics = Vec::from([
         "dsa_problems_solved",
@@ -90,6 +90,8 @@ pub async fn sync_data(event: Event, db: Arc<Mutex<Connection>>) -> Result<()> {
         "study",
         "workout",
     ]);
+    let db = app_handle.state::<DbConnection>();
+    
     for path in event.paths {
         if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
             let file_path = path.to_str();
@@ -98,7 +100,7 @@ pub async fn sync_data(event: Event, db: Arc<Mutex<Connection>>) -> Result<()> {
                     println!("Skipping already visited file: {}", file_path);
                     continue;
                 }
-                match super::read_journal::read_front_matter(file_path, &needed_metrics, db.clone())
+                match super::read_journal::read_front_matter(file_path, &needed_metrics, &*db)
                     .await
                 {
                     Ok(_) => println!("Successfully processed: {}", file_path),

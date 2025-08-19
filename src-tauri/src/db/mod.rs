@@ -1,5 +1,4 @@
 use rusqlite::{Connection, Result};
-use std::sync::{Arc, Mutex};
 
 pub mod metrics;
 pub mod seed;
@@ -7,23 +6,21 @@ pub mod streaks;
 pub mod utils;
 
 pub struct Db {
-    pub conn: Arc<Mutex<Connection>>,
+    pub conn: Connection,
 }
 
 impl Db {
     pub fn new(path: &str) -> Result<Self> {
         let conn = Connection::open(path)?;
-        Ok(Db {
-            conn: Arc::new(Mutex::new(conn)),
-        })
+        Ok(Db { conn })
     }
 
-    pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
-        self.conn.clone()
+    pub fn into_connection(self) -> Connection {
+        self.conn
     }
 
     pub fn init_db(&self) -> Result<()> {
-        self.conn.lock().unwrap().execute_batch(
+        self.conn.execute_batch(
             "
             CREATE TABLE IF NOT EXISTS file_meta (
                 file_path TEXT PRIMARY KEY,

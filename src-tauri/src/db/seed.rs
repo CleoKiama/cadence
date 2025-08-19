@@ -1,36 +1,35 @@
 use chrono::{Days, Local};
 use rand::{rng, Rng};
-use rusqlite::{params, Connection};
-use std::sync::{Arc, Mutex};
+use rusqlite::params;
 
-use crate::core::read_journal::{Metric, DB_DATE_FORMAT, DB_DATE_TIME_FORMAT};
+use crate::{core::read_journal::{Metric, DB_DATE_FORMAT, DB_DATE_TIME_FORMAT}, DbConnection};
 
-pub fn seed_development_data(conn: Arc<Mutex<Connection>>) -> Result<(), anyhow::Error> {
-    if is_db_populated(conn.clone()) {
+pub fn seed_development_data(db: &DbConnection) -> Result<(), anyhow::Error> {
+    if is_db_populated(db) {
         println!("Development data already seeded. Skipping...");
         return Ok(());
     }
     println!("Seeding development data...");
 
     // Seed multiple realistic habits with different patterns
-    seed_consistent_habit(conn.clone(), "exercise", 30, 0.85)?;
-    seed_sporadic_habit(conn.clone(), "meditation", 45, vec![2, 3, 5, 8, 13])?;
-    seed_learning_habit(conn.clone(), "dsa_solved", 60, 0.7)?;
-    seed_reading_habit(conn.clone(), "pages_read", 90, 0.6)?;
+    seed_consistent_habit(db, "exercise", 30, 0.85)?;
+    seed_sporadic_habit(db, "meditation", 45, vec![2, 3, 5, 8, 13])?;
+    seed_learning_habit(db, "dsa_solved", 60, 0.7)?;
+    seed_reading_habit(db, "pages_read", 90, 0.6)?;
     seed_habit_with_breaks(
-        conn.clone(),
+        db,
         "journal_words",
         120,
         vec![(10, 15), (30, 35), (50, 52)],
     )?;
-    seed_recent_habit(conn.clone(), "water_glasses", 14, 0.9)?;
+    seed_recent_habit(db, "water_glasses", 14, 0.9)?;
 
     println!("Development data seeded successfully!");
     Ok(())
 }
 
-fn is_db_populated(conn: Arc<Mutex<Connection>>) -> bool {
-    let conn = conn.lock().unwrap();
+fn is_db_populated(db: &DbConnection) -> bool {
+    let conn = db.lock().unwrap();
     let count: i64 = conn
         .query_row("SELECT COUNT(*) FROM metrics", [], |row| row.get(0))
         .unwrap_or(0);
@@ -38,7 +37,7 @@ fn is_db_populated(conn: Arc<Mutex<Connection>>) -> bool {
 }
 
 fn seed_consistent_habit(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     consistency: f64,
@@ -61,14 +60,14 @@ fn seed_consistent_habit(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
 fn seed_sporadic_habit(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     skip_days: Vec<i32>,
@@ -90,14 +89,14 @@ fn seed_sporadic_habit(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
 fn seed_learning_habit(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     consistency: f64,
@@ -120,14 +119,14 @@ fn seed_learning_habit(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
 fn seed_reading_habit(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     consistency: f64,
@@ -150,14 +149,14 @@ fn seed_reading_habit(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
 fn seed_habit_with_breaks(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     break_periods: Vec<(i32, i32)>,
@@ -182,14 +181,14 @@ fn seed_habit_with_breaks(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
 fn seed_recent_habit(
-    conn: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
     days: i32,
     consistency: f64,
@@ -212,14 +211,14 @@ fn seed_recent_habit(
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
     }
     Ok(())
 }
 
-pub fn insert_metric(conn: &Arc<Mutex<Connection>>, metric: &Metric) -> Result<(), anyhow::Error> {
-    let conn = conn.lock().unwrap();
+pub fn insert_metric(db: &DbConnection, metric: &Metric) -> Result<(), anyhow::Error> {
+    let conn = db.lock().unwrap();
     conn.execute(
         "INSERT OR REPLACE INTO metrics(file_path, name, value, date,updated_at) VALUES (?1, ?2, ?3, ?4,?5)",
         params![

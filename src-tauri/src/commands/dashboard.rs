@@ -1,12 +1,12 @@
-use std::sync::{Arc, Mutex};
-
-use rusqlite::Connection;
 use serde::Serialize;
 use tauri::State;
 
-use crate::db::metrics;
-use crate::db::streaks::{get_habit_streak, get_longest_habit_streak};
-use crate::db::utils::get_all_habits;
+use crate::{
+    db::metrics,
+    db::streaks::{get_habit_streak, get_longest_habit_streak},
+    db::utils::get_all_habits,
+    DbConnection,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "lowercase")]
@@ -30,37 +30,32 @@ pub struct DashboardMetrics {
 }
 
 #[tauri::command]
-pub fn get_dashboard_metrics(
-    state: State<'_, Arc<Mutex<Connection>>>,
-) -> Result<Vec<DashboardMetrics>, String> {
-    let habit_metrics = get_habit_metrics(&state)?;
+pub fn get_dashboard_metrics(db: State<'_, DbConnection>) -> Result<Vec<DashboardMetrics>, String> {
+    let habit_metrics = get_habit_metrics(&db)?;
 
     Ok(habit_metrics)
 }
 
-fn get_habit_metrics(conn: &Arc<Mutex<Connection>>) -> Result<Vec<DashboardMetrics>, String> {
-    let habits = get_all_habits(conn).map_err(|e| e.to_string())?;
+fn get_habit_metrics(db: &DbConnection) -> Result<Vec<DashboardMetrics>, String> {
+    let habits = get_all_habits(db).map_err(|e| e.to_string())?;
     let mut metrics_list = Vec::with_capacity(habits.len());
     for habit in habits {
-        let summary_metric = get_summary_metric(conn, &habit)?;
+        let summary_metric = get_summary_metric(db, &habit)?;
         metrics_list.push(summary_metric);
     }
 
     Ok(metrics_list)
 }
 
-fn get_summary_metric(
-    conn: &Arc<Mutex<Connection>>,
-    habit_name: &str,
-) -> Result<DashboardMetrics, String> {
-    let current_streak = get_habit_streak(conn, habit_name).map_err(|e| e.to_string())?;
-    let longest_streak = get_longest_habit_streak(conn, habit_name).map_err(|e| e.to_string())?;
-    let weekly_avg = metrics::get_weekly_metric_avg(conn, habit_name).map_err(|e| e.to_string())?;
+fn get_summary_metric(db: &DbConnection, habit_name: &str) -> Result<DashboardMetrics, String> {
+    let current_streak = get_habit_streak(db, habit_name).map_err(|e| e.to_string())?;
+    let longest_streak = get_longest_habit_streak(db, habit_name).map_err(|e| e.to_string())?;
+    let weekly_avg = metrics::get_weekly_metric_avg(db, habit_name).map_err(|e| e.to_string())?;
     let monthly_total =
-        metrics::get_monthly_metric_total(conn, habit_name).map_err(|e| e.to_string())?;
+        metrics::get_monthly_metric_total(db, habit_name).map_err(|e| e.to_string())?;
 
     let display_name = habit_name.to_string(); //HACK: Placeholder for display name logic
-    let conn = conn.lock().unwrap();
+    let conn = db.lock().unwrap();
     let mut stmt = conn
         .prepare("SELECT updated_at FROM metrics WHERE name = ?1 ORDER BY updated_at DESC LIMIT 1")
         .map_err(|e| e.to_string())?;

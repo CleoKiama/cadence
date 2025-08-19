@@ -1,6 +1,8 @@
 use std::env;
+use std::sync::Mutex;
 
 use tauri::Manager;
+use rusqlite::Connection;
 
 mod commands;
 mod core;
@@ -16,10 +18,11 @@ use dotenvy::dotenv;
 use crate::commands::recent_activity::get_recent_activity;
 use crate::core::file_watcher::WatchCommand;
 use crate::db::utils::get_journal_files_path;
-use std::sync::{Arc, Mutex};
 use tauri::async_runtime::Sender;
 
-pub type Watcher = Arc<Mutex<Option<Sender<WatchCommand>>>>;
+// Type aliases to prevent runtime panics
+pub type DbConnection = Mutex<Connection>;
+pub type WatcherState = Mutex<Option<Sender<WatchCommand>>>;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -43,17 +46,17 @@ pub fn run() {
                 eprintln!("Failed to initialize the database: {}", err);
             }
 
-            let watcher: Watcher = Arc::new(Mutex::new(None));
-            app.manage(db.get_connection());
-            app.manage(watcher.clone());
+            let watcher: WatcherState = Mutex::new(None);
+            app.manage(DbConnection::new(db.into_connection()));
+            app.manage(watcher);
 
             tauri::async_runtime::spawn({
-                let db_clone = db.get_connection();
-                let watcher_clone = watcher.clone();
+                let app_handle = app.handle().clone();
 
                 async move {
                     // Get journal path from settings
-                    let journal_path = match get_journal_files_path(&db_clone) {
+                    let db_state = app_handle.state::<DbConnection>();
+                    let journal_path = match get_journal_files_path(&*db_state) {
                         Ok(path) => path,
                         Err(e) => {
                             eprintln!("Error getting journal path from settings: {}", e);
@@ -62,16 +65,18 @@ pub fn run() {
                     };
 
                     // Initialize core with optional journal path
-                    match core::init(db_clone.clone(), journal_path).await {
+                    match core::init(app_handle.clone(), journal_path).await {
                         Ok(handle_opt) => {
-                            watcher_clone.lock().unwrap().replace(handle_opt);
+                            let watcher_state = app_handle.state::<WatcherState>();
+                            watcher_state.lock().unwrap().replace(handle_opt);
                         }
                         Err(e) => eprintln!("Error during core initialization: {}", e),
                     }
 
                     if seed_database {
                         println!("Seeding database here...");
-                        if let Err(e) = db::seed::seed_development_data(db_clone) {
+                        let db_state = app_handle.state::<DbConnection>();
+                        if let Err(e) = db::seed::seed_development_data(&*db_state) {
                             eprintln!("Error seeding database: {}", e);
                         } else {
                             println!("Database seeded successfully!");

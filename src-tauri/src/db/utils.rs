@@ -1,9 +1,7 @@
-use std::sync::{Arc, Mutex};
+use crate::DbConnection;
 
-use rusqlite::Connection;
-
-pub fn get_all_habits(conn: &Arc<Mutex<Connection>>) -> Result<Vec<String>, rusqlite::Error> {
-    let conn = conn.lock().unwrap();
+pub fn get_all_habits(db: &DbConnection) -> Result<Vec<String>, rusqlite::Error> {
+    let conn = db.lock().unwrap();
     let mut stmt = conn.prepare("SELECT DISTINCT name FROM metrics")?;
     let habit_iter = stmt.query_map([], |row| row.get(0))?;
 
@@ -16,11 +14,11 @@ pub fn get_all_habits(conn: &Arc<Mutex<Connection>>) -> Result<Vec<String>, rusq
 }
 
 pub fn get_journal_files_path(
-    conn: &std::sync::Arc<std::sync::Mutex<rusqlite::Connection>>,
+    db: &DbConnection,
 ) -> Result<Option<String>, anyhow::Error> {
     use rusqlite::params;
 
-    let conn = conn
+    let conn = db
         .lock()
         .map_err(|e| anyhow::anyhow!("Failed to lock connection: {}", e))?;
 

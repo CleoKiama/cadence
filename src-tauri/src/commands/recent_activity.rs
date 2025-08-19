@@ -1,12 +1,10 @@
 use anyhow::anyhow;
 use chrono::{Days, Local, Months};
-use rusqlite::Connection;
 use serde::Serialize;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 use tauri::State;
 
-use crate::{core::read_journal::DB_DATE_FORMAT, db::utils::get_all_habits};
+use crate::{core::read_journal::DB_DATE_FORMAT, db::utils::get_all_habits, DbConnection};
 
 #[derive(Serialize)]
 pub struct DataPoint {
@@ -23,16 +21,16 @@ pub struct HabitData {
 
 #[tauri::command]
 pub fn get_recent_activity(
-    state: State<'_, Arc<Mutex<Connection>>>,
+    db: State<'_, DbConnection>,
 ) -> Result<Vec<HabitData>, String> {
-    let data = get_recent_activity_date(&state).map_err(|e| e.to_string())?;
+    let data = get_recent_activity_date(&db).map_err(|e| e.to_string())?;
     Ok(data)
 }
 
 fn get_recent_activity_date(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
 ) -> Result<Vec<HabitData>, anyhow::Error> {
-    let current_habits = get_all_habits(conn)?;
+    let current_habits = get_all_habits(db)?;
     let mut habit_data: Vec<HabitData> = Vec::new();
 
     let today = Local::now().date_naive();
@@ -40,7 +38,7 @@ fn get_recent_activity_date(
         .checked_sub_months(Months::new(1))
         .ok_or_else(|| anyhow!("Failed to calculate target date"))?;
 
-    let conn = conn
+    let conn = db
         .lock()
         .map_err(|e| anyhow!("Failed to lock connection: {}", e))?;
 

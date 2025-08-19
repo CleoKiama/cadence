@@ -1,13 +1,14 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, NaiveDate, Utc};
-use rusqlite::{params, Connection};
+use rusqlite::params;
 use std::path::Path;
-use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use tokio::fs::metadata;
 use tokio::fs::File;
 use tokio::io::AsyncBufReadExt;
 use tokio::io::BufReader;
+
+use crate::DbConnection;
 
 pub const DB_DATE_FORMAT: &str = "%Y-%m-%d";
 pub const DB_DATE_TIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
@@ -23,9 +24,9 @@ pub struct Metric {
 pub async fn read_front_matter(
     path: &str,
     needed_metrics: &Vec<&str>,
-    db: Arc<Mutex<Connection>>,
+    db: &DbConnection,
 ) -> Result<(), anyhow::Error> {
-    if !should_read_file(path, db.clone()).await? {
+    if !should_read_file(path, db).await? {
         return Ok(());
     }
 
@@ -46,7 +47,7 @@ pub async fn read_front_matter(
         for metric in needed_metrics {
             if line.starts_with(metric) {
                 let metric = extract_metric(&line, path)?;
-                write_metric_to_db(metric, db.clone())?;
+                write_metric_to_db(metric, db)?;
             }
         }
     }
@@ -82,7 +83,7 @@ fn extract_metric(line: &str, path: &str) -> Result<Metric> {
     }
 }
 
-async fn should_read_file(path: &str, db: Arc<Mutex<Connection>>) -> Result<bool> {
+async fn should_read_file(path: &str, db: &DbConnection) -> Result<bool> {
     let file_path = Path::new(path);
     if !file_path.exists() {
         return Ok(false);
@@ -113,7 +114,7 @@ async fn should_read_file(path: &str, db: Arc<Mutex<Connection>>) -> Result<bool
     Ok(meta_matches == 0 || metrics_exist == 0)
 }
 
-pub fn write_metric_to_db(metrics: Metric, db: Arc<Mutex<Connection>>) -> Result<()> {
+pub fn write_metric_to_db(metrics: Metric, db: &DbConnection) -> Result<()> {
     let _ = db.lock().unwrap().execute(
         "INSERT OR REPLACE INTO metrics (file_path, name, value, date,updated_at) VALUES (?1, ?2, ?3, ?4)",
         params![
@@ -127,7 +128,7 @@ pub fn write_metric_to_db(metrics: Metric, db: Arc<Mutex<Connection>>) -> Result
     Ok(())
 }
 
-fn update_file_metadata(path: &str, db: Arc<Mutex<Connection>>) -> Result<()> {
+fn update_file_metadata(path: &str, db: &DbConnection) -> Result<()> {
     let file_path = Path::new(path);
     let last_modified: SystemTime = file_path
         .metadata()

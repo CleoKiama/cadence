@@ -1,15 +1,12 @@
-use std::{
-    collections::HashSet,
-    sync::{Arc, Mutex},
-};
+use std::collections::HashSet;
 
 use chrono::{Local, NaiveDate};
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
-use crate::core::read_journal::DB_DATE_FORMAT;
+use crate::{core::read_journal::DB_DATE_FORMAT, DbConnection};
 
-pub fn get_habit_streak(conn: &Arc<Mutex<Connection>>, name: &str) -> Result<i64, anyhow::Error> {
-    let conn = conn.lock().unwrap();
+pub fn get_habit_streak(db: &DbConnection, name: &str) -> Result<i64, anyhow::Error> {
+    let conn = db.lock().unwrap();
     let today = Local::now().date_naive();
     let mut current_date = today
         .checked_sub_days(chrono::Days::new(1))
@@ -52,10 +49,10 @@ pub fn get_habit_streak(conn: &Arc<Mutex<Connection>>, name: &str) -> Result<i64
 }
 
 pub fn get_longest_habit_streak(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     name: &str,
 ) -> Result<i64, anyhow::Error> {
-    let conn = conn.lock().unwrap();
+    let conn = db.lock().unwrap();
 
     // Query all relevant dates where this habit has value > 0
     let mut stmt =

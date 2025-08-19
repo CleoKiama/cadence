@@ -1,26 +1,27 @@
 use anyhow::Context;
 use chrono::{DateTime, Utc};
-use rusqlite::{params, Connection};
-use std::sync::{Arc, Mutex};
+use rusqlite::params;
 use tokio;
+
+use crate::DbConnection;
 
 pub async fn read_dailies_dir(
     dir_path: &str,
-    db: Arc<Mutex<Connection>>,
+    db: &DbConnection,
 ) -> Result<Vec<String>, anyhow::Error> {
     let mut paths = Vec::new();
     let mut dir_entries = tokio::fs::read_dir(dir_path)
         .await
         .with_context(|| format!("Failed to read the directory: {}", dir_path))?;
     while let Some(entry) = dir_entries.next_entry().await? {
-        read_entry(entry, db.clone(), &mut paths).await?;
+        read_entry(entry, db, &mut paths).await?;
     }
     Ok(paths)
 }
 
 async fn read_entry(
     dir_entry: tokio::fs::DirEntry,
-    db: Arc<Mutex<Connection>>,
+    db: &DbConnection,
     paths: &mut Vec<String>,
 ) -> Result<(), anyhow::Error> {
     let path = dir_entry.path();

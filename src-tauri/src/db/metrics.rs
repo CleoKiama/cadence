@@ -1,20 +1,19 @@
-use std::sync::{Arc, Mutex};
-
 use anyhow::Context;
 use chrono::{Datelike, Days, Local, NaiveDate, Weekday};
-use rusqlite::{params, Connection};
+use rusqlite::params;
 
 use crate::{
     commands::analytics::{ChartDataPoint, HeatmapPoint},
     core::read_journal::DB_DATE_FORMAT,
     db::utils::get_all_habits,
+    DbConnection,
 };
 
 pub fn get_weekly_metric_avg(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     habit_name: &str,
 ) -> Result<f32, anyhow::Error> {
-    let conn = conn.lock().unwrap();
+    let conn = db.lock().unwrap();
     let now = Local::now();
     let today = now.date_naive();
     let week = today.week(Weekday::Sun);
@@ -41,10 +40,10 @@ pub fn get_weekly_metric_avg(
 }
 
 pub fn get_monthly_metric_total(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     habit_name: &str,
 ) -> Result<u32, anyhow::Error> {
-    let conn = conn.lock().unwrap();
+    let conn = db.lock().unwrap();
     let today = Local::now().date_naive();
 
     let start_of_month = today
@@ -90,11 +89,11 @@ pub fn get_monthly_metric_total(
 }
 
 fn get_habit_trend_data(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     habit_name: &str,
     days: u32,
 ) -> Result<Vec<ChartDataPoint>, anyhow::Error> {
-    let conn = conn.lock().unwrap();
+    let conn = db.lock().unwrap();
     let today = Local::now().date_naive();
     let start_date = today
         .checked_sub_days(Days::new(days as u64))
@@ -148,11 +147,11 @@ fn get_habit_trend_data(
 }
 
 pub fn get_habit_heatmap_data(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     habit_name: &str,
     days: u32,
 ) -> Result<Vec<HeatmapPoint>, anyhow::Error> {
-    let trend_data = get_habit_trend_data(conn, habit_name, days)?;
+    let trend_data = get_habit_trend_data(db, habit_name, days)?;
 
     // Find max value to calculate intensity levels
     let max_value = trend_data.iter().map(|d| d.value).max().unwrap_or(1);
@@ -180,15 +179,15 @@ pub fn get_habit_heatmap_data(
 }
 
 pub fn get_all_habits_analytics(
-    conn: &Arc<Mutex<Connection>>,
+    db: &DbConnection,
     days: u32,
 ) -> Result<std::collections::HashMap<String, Vec<ChartDataPoint>>, anyhow::Error> {
     // Get all unique habit names
-    let habit_names = get_all_habits(conn)?;
+    let habit_names = get_all_habits(db)?;
     let mut result = std::collections::HashMap::new();
 
     for habit_name in habit_names {
-        let trend_data = get_habit_trend_data(conn, &habit_name, days)?;
+        let trend_data = get_habit_trend_data(db, &habit_name, days)?;
         result.insert(habit_name, trend_data);
     }
 

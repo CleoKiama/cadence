@@ -1,9 +1,7 @@
-use rusqlite::Connection;
 use serde::Serialize;
-use std::sync::{Arc, Mutex};
 use tauri::State;
 
-use crate::db::metrics::{get_all_habits_analytics, get_habit_heatmap_data};
+use crate::{db::metrics::{get_all_habits_analytics, get_habit_heatmap_data}, DbConnection};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -45,12 +43,12 @@ pub struct AnalyticsSummary {
 
 #[tauri::command]
 pub fn get_analytics_heatmap_data(
-    state: State<'_, Arc<Mutex<Connection>>>,
+    db: State<'_, DbConnection>,
     habit_name: String,
     days: u32,
 ) -> Result<AnalyticsHeatmapData, String> {
     let heatmap_data =
-        get_habit_heatmap_data(&state, &habit_name, days).map_err(|e| e.to_string())?;
+        get_habit_heatmap_data(&db, &habit_name, days).map_err(|e| e.to_string())?;
 
     let chart_data = heatmap_data
         .into_iter()
@@ -69,10 +67,10 @@ pub fn get_analytics_heatmap_data(
 
 #[tauri::command]
 pub fn get_all_analytics_data(
-    state: State<'_, Arc<Mutex<Connection>>>,
+    db: State<'_, DbConnection>,
     days: u32,
 ) -> Result<Vec<AnalyticsTrendData>, String> {
-    let all_data = get_all_habits_analytics(&state, days).map_err(|e| e.to_string())?;
+    let all_data = get_all_habits_analytics(&db, days).map_err(|e| e.to_string())?;
 
     let result = all_data
         .into_iter()
@@ -94,4 +92,3 @@ pub fn get_all_analytics_data(
 
     Ok(result)
 }
-
