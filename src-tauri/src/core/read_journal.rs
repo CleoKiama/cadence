@@ -22,7 +22,7 @@ pub struct Metric {
 
 pub async fn read_front_matter(
     path: &str,
-    needed_metrics: &Vec<String>,
+    needed_metrics: &Vec<&str>,
     db: Arc<Mutex<Connection>>,
 ) -> Result<(), anyhow::Error> {
     if !should_read_file(path, db.clone()).await? {

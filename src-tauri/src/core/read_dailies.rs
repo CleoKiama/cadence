@@ -4,7 +4,10 @@ use rusqlite::{params, Connection};
 use std::sync::{Arc, Mutex};
 use tokio;
 
-pub async fn read_dailies_dir(dir_path: &str, db: Arc<Mutex<Connection>>) -> Result<Vec<String>, anyhow::Error> {
+pub async fn read_dailies_dir(
+    dir_path: &str,
+    db: Arc<Mutex<Connection>>,
+) -> Result<Vec<String>, anyhow::Error> {
     let mut paths = Vec::new();
     let mut dir_entries = tokio::fs::read_dir(dir_path)
         .await
