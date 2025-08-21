@@ -48,10 +48,7 @@ pub fn get_habit_streak(db: &DbConnection, name: &str) -> Result<i64, anyhow::Er
     Ok(streak)
 }
 
-pub fn get_longest_habit_streak(
-    db: &DbConnection,
-    name: &str,
-) -> Result<i64, anyhow::Error> {
+pub fn get_longest_habit_streak(db: &DbConnection, name: &str) -> Result<i64, anyhow::Error> {
     let conn = db.lock().unwrap();
 
     // Query all relevant dates where this habit has value > 0
@@ -107,10 +104,11 @@ mod tests {
     use anyhow::Context;
     use chrono::{Days, Local};
     use rand::{rng, Rng};
+    use rusqlite::Connection;
 
     use crate::{
         core::read_journal::{Metric, DB_DATE_FORMAT},
-        db::{seed::insert_metric, Db},
+        db::seed::insert_metric,
     };
 
     // Note this useful idiom: importing names from outer (for mod tests) scope.
@@ -118,19 +116,32 @@ mod tests {
     const MAX_DATE: i32 = 20;
     const METRIC_NAME: &str = "dsa_solved";
 
-    fn setup_test_db() -> Result<Db, anyhow::Error> {
+    fn setup_test_db() -> Result<DbConnection, anyhow::Error> {
         let conn = Connection::open_in_memory()
             .with_context(|| "Failed to open in-memory database with error".to_string())?;
 
-        let db = Db {
-            conn: Arc::new(Mutex::new(conn)),
-        };
-        db.init_db()?;
+        let db = DbConnection::new(conn);
+
+        // Initialize the database schema
+        {
+            let conn = db.lock().unwrap();
+            conn.execute(
+                "CREATE TABLE IF NOT EXISTS metrics (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    file_path TEXT NOT NULL,
+                    name TEXT NOT NULL,
+                    value INTEGER NOT NULL,
+                    date TEXT NOT NULL
+                )",
+                [],
+            )?;
+        }
+
         Ok(db)
     }
 
     fn seed_test_data(
-        conn: Arc<Mutex<Connection>>,
+        db: &DbConnection,
         metric_name: &str,
         days: i32,
     ) -> Result<(), anyhow::Error> {
@@ -147,30 +158,28 @@ mod tests {
                 value,
                 date,
             };
-            insert_metric(&conn, &metric)?;
+            insert_metric(db, &metric)?;
         }
         Ok(())
     }
 
-    fn seed_database(conn: Arc<Mutex<Connection>>) -> Result<(), anyhow::Error> {
-        seed_test_data(conn, METRIC_NAME, MAX_DATE)
+    fn seed_database(db: &DbConnection) -> Result<(), anyhow::Error> {
+        seed_test_data(db, METRIC_NAME, MAX_DATE)
     }
 
     #[test]
     fn test_get_habit_streak() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
-        seed_database(conn.clone()).expect("Failed to seed database");
-        let streak = get_habit_streak(&conn, METRIC_NAME).expect("Failed to get habit streak");
+        seed_database(&db).expect("Failed to seed database");
+        let streak = get_habit_streak(&db, METRIC_NAME).expect("Failed to get habit streak");
         assert_eq!(streak, 20);
     }
     #[test]
     fn test_broken_habit_streak() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
-        seed_database(conn.clone()).expect("Failed to seed database");
+        seed_database(&db).expect("Failed to seed database");
 
-        let conn = conn.lock().unwrap();
+        let conn = db.lock().unwrap();
         let two_days_ago = Local::now()
             .date_naive()
             .checked_sub_days(Days::new(2))
@@ -185,18 +194,16 @@ mod tests {
 
         drop(conn); // unlock
 
-        let streak =
-            get_habit_streak(&db.get_connection(), METRIC_NAME).expect("Failed to get streak");
+        let streak = get_habit_streak(&db, METRIC_NAME).expect("Failed to get streak");
 
         assert_eq!(streak, 1);
     }
     #[test]
     fn test_missed_yesterday_resets_streak() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
-        seed_database(conn.clone()).expect("Failed to seed database");
+        seed_database(&db).expect("Failed to seed database");
 
-        let conn = conn.lock().unwrap();
+        let conn = db.lock().unwrap();
         let yesterday = Local::now()
             .date_naive()
             .checked_sub_days(Days::new(1))
@@ -210,28 +217,26 @@ mod tests {
 
         drop(conn);
 
-        let streak = get_habit_streak(&db.get_connection(), METRIC_NAME).unwrap();
+        let streak = get_habit_streak(&db, METRIC_NAME).unwrap();
         assert_eq!(streak, 0);
     }
 
     #[test]
     fn test_get_longest_habit_streak_continuous() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
-        seed_database(conn.clone()).expect("Failed to seed database");
+        seed_database(&db).expect("Failed to seed database");
 
-        let longest_streak = get_longest_habit_streak(&conn, METRIC_NAME)
-            .expect("Failed to get longest habit streak");
+        let longest_streak =
+            get_longest_habit_streak(&db, METRIC_NAME).expect("Failed to get longest habit streak");
         assert_eq!(longest_streak, 21); // MAX_DATE + 1 (0 to 20 inclusive)
     }
 
     #[test]
     fn test_get_longest_habit_streak_with_gaps() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
 
         // Create a pattern: 3 days, gap, 5 days, gap, 2 days
-        let conn_guard = conn.lock().unwrap();
+        let conn_guard = db.lock().unwrap();
         let current_date = Local::now().date_naive();
 
         // First streak: 3 days (days 0, 1, 2)
@@ -284,17 +289,16 @@ mod tests {
 
         drop(conn_guard);
 
-        let longest_streak = get_longest_habit_streak(&conn, METRIC_NAME)
-            .expect("Failed to get longest habit streak");
+        let longest_streak =
+            get_longest_habit_streak(&db, METRIC_NAME).expect("Failed to get longest habit streak");
         assert_eq!(longest_streak, 5); // Should find the longest streak of 5 days
     }
 
     #[test]
     fn test_get_longest_habit_streak_no_entries() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
 
-        let longest_streak = get_longest_habit_streak(&conn, "nonexistent_habit")
+        let longest_streak = get_longest_habit_streak(&db, "nonexistent_habit")
             .expect("Failed to get longest habit streak");
         assert_eq!(longest_streak, 0);
     }
@@ -302,9 +306,8 @@ mod tests {
     #[test]
     fn test_get_longest_habit_streak_single_entry() {
         let db = setup_test_db().expect("Failed to setup test database");
-        let conn = db.get_connection();
 
-        let conn_guard = conn.lock().unwrap();
+        let conn_guard = db.lock().unwrap();
         let current_date = Local::now().date_naive();
 
         conn_guard
@@ -321,8 +324,8 @@ mod tests {
 
         drop(conn_guard);
 
-        let longest_streak = get_longest_habit_streak(&conn, METRIC_NAME)
-            .expect("Failed to get longest habit streak");
+        let longest_streak =
+            get_longest_habit_streak(&db, METRIC_NAME).expect("Failed to get longest habit streak");
         assert_eq!(longest_streak, 1);
     }
 }
