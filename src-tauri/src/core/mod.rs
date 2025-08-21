@@ -1,7 +1,6 @@
 use tauri::{async_runtime::Sender, AppHandle, Manager};
 
 pub mod file_watcher;
-pub mod needed_metrics;
 pub mod read_dailies;
 pub mod read_journal;
 
@@ -25,18 +24,15 @@ fn get_tracked_metrics_from_db(db: &DbConnection) -> Result<Vec<String>, anyhow:
     Ok(metrics)
 }
 
-pub async fn resync_database(
-    db: &DbConnection,
-    journal_path: &str,
-) -> Result<(), anyhow::Error> {
+pub async fn resync_database(db: &DbConnection, journal_path: &str) -> Result<(), anyhow::Error> {
     let tracked_metrics = get_tracked_metrics_from_db(db)?;
-    
+
     if tracked_metrics.is_empty() {
         return Ok(());
     }
 
     let needed_metrics: Vec<&str> = tracked_metrics.iter().map(|s| s.as_str()).collect();
-    
+
     let dailies = read_dailies_dir(journal_path, db).await?;
     for daily in dailies {
         let result = read_journal::read_front_matter(&daily, &needed_metrics, db).await;
@@ -45,7 +41,7 @@ pub async fn resync_database(
             Err(e) => eprintln!("Error reading front matter for {}: {}", daily, e),
         }
     }
-    
+
     Ok(())
 }
 
@@ -54,9 +50,9 @@ pub async fn init(
     journal_path: Option<String>,
 ) -> Result<Sender<WatchCommand>, anyhow::Error> {
     let db = app_handle.state::<DbConnection>();
-    
+
     let tracked_metrics = get_tracked_metrics_from_db(&db)?;
-    
+
     if let Some(root_dir) = &journal_path {
         if !tracked_metrics.is_empty() {
             let needed_metrics: Vec<&str> = tracked_metrics.iter().map(|s| s.as_str()).collect();
