@@ -185,6 +185,25 @@ pub fn delete_metric(
 }
 
 #[tauri::command]
+pub fn add_metric(db: tauri::State<'_, DbConnection>, metric_name: String) -> Result<(), String> {
+    let conn = db
+        .lock()
+        .map_err(|e| format!("Failed to lock connection: {}", e))?;
+
+    // Insert into tracked_metrics table
+    let mut stmt = conn
+        .prepare("INSERT OR REPLACE INTO tracked_metrics (value) VALUES (?1)")
+        .map_err(|e| format!("Failed to prepare statement: {}", e))?;
+
+    stmt.execute([metric_name.clone()])
+        .map_err(|e| format!("Failed to add metric: {}", e))?;
+
+    println!("Added metric: {}", metric_name);
+    //TODO: Call re sync database after adding metric
+    Ok(())
+}
+
+#[tauri::command]
 pub fn udpate_metric(
     db: tauri::State<'_, DbConnection>,
     prev_name: String,

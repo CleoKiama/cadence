@@ -84,6 +84,12 @@ export const MetricConfiguration = () => {
 
 	const handleAddMetric = async (newMetric: string) => {
 		console.log("Adding new metric:", newMetric);
+		invoke("add_metric", { metricName: newMetric })
+			.then(() => {
+				console.log("Metric added successfully");
+				//TODO: fetchSettings(); // Refresh settings after addition
+			})
+			.catch((err) => console.error("Error adding metric:", err));
 	};
 
 	const handleDeleteMetric = (metricName: string) => {
@@ -107,7 +113,7 @@ export const MetricConfiguration = () => {
 			prevName,
 			newName,
 		})
-			.then(() => console.log("Metric update successfully"))
+			.then(() => console.log("Metric update successfully")) //TODO: fetchSettings(); // Refresh settings after update
 			.catch((e) => console.error("Error updating metric:", e));
 	};
 
