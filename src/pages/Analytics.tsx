@@ -3,7 +3,7 @@ import { HeatmapDataPoint } from "#/types/metrics";
 import { TrendChart } from "#/components/analytics/TrendChart";
 import { CalendarHeatmap } from "#/components/analytics/CalendarHeatmap";
 import { StatsSummary } from "#/components/analytics/StatsSummary";
-import { Button } from "#/components/shared/Button";
+import { Button } from "#/components/ui/button";
 import { getDateRange } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
@@ -134,7 +134,7 @@ export const Analytics = () => {
 		return (
 			<div className="space-y-8">
 				<div className="flex justify-center items-center h-64">
-					<div className="text-red-500">Error: {error}</div>
+					<div className="text-destructive">Error: {error}</div>
 				</div>
 			</div>
 		);
@@ -145,10 +145,8 @@ export const Analytics = () => {
 			{/* Header */}
 			<div className="flex justify-between items-center">
 				<div>
-					<h1 className="text-2xl font-bold text-[var(--color-foreground)]">
-						Analytics
-					</h1>
-					<p className="text-[var(--color-muted-foreground)]">
+					<h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+					<p className="text-muted-foreground">
 						Detailed insights into your habit tracking progress
 					</p>
 				</div>
@@ -158,7 +156,7 @@ export const Analytics = () => {
 					{timeRangeOptions.map((option) => (
 						<Button
 							key={option.value}
-							variant={timeRange === option.value ? "primary" : "ghost"}
+							variant={timeRange === option.value ? "default" : "ghost"}
 							size="sm"
 							onClick={() => setTimeRange(option.value)}
 						>
@@ -176,7 +174,7 @@ export const Analytics = () => {
 
 			{/* Trend Charts */}
 			<div>
-				<h2 className="text-xl font-semibold mb-6 text-[var(--color-foreground)]">
+				<h2 className="text-xl font-semibold mb-6 text-foreground">
 					Trends Over Time
 				</h2>
 				<div className="space-y-6">
@@ -187,7 +185,7 @@ export const Analytics = () => {
 								title={`${habitName} Trend`}
 								metricName={habitName}
 								data={data}
-								color="var(--color-chart-1)"
+								color="var(--chart-1)"
 							/>
 						);
 					})}
@@ -196,7 +194,7 @@ export const Analytics = () => {
 
 			{/* Activity Heatmaps */}
 			<div>
-				<h2 className="text-xl font-semibold mb-6 text-[var(--color-foreground)]">
+				<h2 className="text-xl font-semibold mb-6 text-foreground">
 					Activity Heatmaps
 				</h2>
 				<div className="space-y-6">

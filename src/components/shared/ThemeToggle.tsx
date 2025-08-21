@@ -1,6 +1,6 @@
 import React from 'react';
 import { useTheme } from '../../hooks/useTheme';
-import { Button } from './Button';
+import { Button } from '#/components/ui/button';
 
 // Temporary icon components until lucide-react is installed
 const SunIcon = () => (

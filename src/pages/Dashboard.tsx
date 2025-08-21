@@ -33,10 +33,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 		<div className="space-y-8">
 			{/* Welcome Section */}
 			<div className="text-center py-8">
-				<h1 className="text-3xl font-bold text-[var(--color-foreground)] mb-2">
+				<h1 className="text-3xl font-bold text-foreground mb-2">
 					Welcome back to Habitron
 				</h1>
-				<p className="text-[var(--color-muted-foreground)]">
+				<p className="text-muted-foreground">
 					{formatDisplayDate(new Date())} • Track your habits, build your future
 				</p>
 			</div>

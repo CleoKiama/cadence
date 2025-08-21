@@ -41,7 +41,7 @@ export const MetricGrid = () => {
 
 	return (
 		<div>
-			<h2 className="text-xl font-semibold mb-6 text-[var(--color-foreground)]">
+			<h2 className="text-xl font-semibold mb-6 text-foreground ">
 				Your Habits
 			</h2>
 			<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">

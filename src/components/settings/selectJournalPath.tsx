@@ -1,4 +1,4 @@
-import { Button } from "#/components/shared/Button";
+import { Button } from "#/components/ui/button";
 import { useState } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { Loader2 } from "lucide-react";
@@ -65,26 +65,26 @@ export default function ChooseJournalDirectory({
 			</p>
 			
 			{journalPath && (
-				<div className="p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+				<div className="p-3 bg-muted rounded-lg">
 					<p className="text-sm font-medium">Current path:</p>
-					<p className="text-sm text-gray-600 dark:text-gray-300 break-all">{journalPath}</p>
+					<p className="text-sm text-muted-foreground break-all">{journalPath}</p>
 				</div>
 			)}
 
 			{error && (
-				<div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
-					<p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+				<div className="p-3 bg-muted border border-destructive rounded-lg">
+					<p className="text-sm text-destructive">{error}</p>
 				</div>
 			)}
 
 			{success && (
-				<div className="p-3 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg">
-					<p className="text-sm text-green-600 dark:text-green-400">{success}</p>
+				<div className="p-3 bg-muted border border-success rounded-lg">
+					<p className="text-sm text-success">{success}</p>
 				</div>
 			)}
 
 			<Button
-				variant="primary"
+				variant="default"
 				className="cursor-pointer"
 				disabled={isSelecting || isUpdating}
 				onClick={handlePathChange}

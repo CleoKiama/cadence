@@ -1,6 +1,6 @@
 import React from "react";
 
-import { Card } from "../shared/Card";
+import { Card } from "#/components/ui/card";
 import { MetricSummary } from "#/components/dashboard/MetricGrid";
 
 interface StatsSummaryProps {
@@ -24,35 +24,33 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({
 			value: totalActiveMetrics,
 			total: metrics.length,
 			format: (v: number, t: number) => `${v}/${t}`,
-			color: "text-[var(--color-accent)]",
+			color: "text-accent",
 		},
 		{
 			label: "Avg Streak",
 			value: averageStreak,
 			format: (v: number) => `${v.toFixed(1)} days`,
-			color: "text-[var(--color-primary)]",
+			color: "text-primary",
 		},
 		{
 			label: "Best Streak",
 			value: longestCurrentStreak,
 			format: (v: number) => `${v} days`,
-			color: "text-orange-500",
+			color: "text-warning",
 		},
 		{
 			label: "Total Activities",
 			value: totalActivities,
 			format: (v: number) => v.toString(),
-			color: "text-[var(--color-chart-1)]",
+			color: "text-chart-1",
 		},
 	];
 
 	return (
-		<Card>
+		<Card className="p-6 space-y-6">
 			<div className="mb-6">
 				<h3 className="text-lg font-semibold">Statistics Overview</h3>
-				<p className="text-sm text-[var(--color-muted-foreground)]">
-					{timeRange}
-				</p>
+				<p className="text-sm text-muted-foreground">{timeRange}</p>
 			</div>
 
 			<div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
@@ -61,9 +59,7 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({
 						<div className={`text-3xl font-bold ${stat.color} mb-2`}>
 							{stat.format(stat.value, (stat as any).total)}
 						</div>
-						<div className="text-sm text-[var(--color-muted-foreground)]">
-							{stat.label}
-						</div>
+						<div className="text-sm text-muted-foreground">{stat.label}</div>
 					</div>
 				))}
 			</div>
@@ -74,13 +70,13 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({
 					<div key={metric.name} className="space-y-2">
 						<div className="flex justify-between items-center">
 							<span className="text-sm font-medium">{metric.displayName}</span>
-							<span className="text-sm text-[var(--color-muted-foreground)]">
+							<span className="text-sm text-muted-foreground">
 								{metric.currentStreak}/{metric.longestStreak} days
 							</span>
 						</div>
-						<div className="w-full bg-[var(--color-muted)] rounded-full h-2">
+						<div className="w-full bg-muted rounded-full h-2">
 							<div
-								className="h-2 rounded-full bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] transition-all duration-500"
+								className="h-2 rounded-full bg-gradient-to-r from-primary to-accent transition-all duration-500"
 								style={{
 									width: `${Math.min((metric.currentStreak / metric.longestStreak) * 100, 100)}%`,
 								}}
@@ -92,4 +88,3 @@ export const StatsSummary: React.FC<StatsSummaryProps> = ({
 		</Card>
 	);
 };
-

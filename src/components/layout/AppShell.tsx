@@ -11,7 +11,7 @@ interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({ children, activeView, onViewChange }) => {
   return (
-    <div className="min-h-screen bg-[var(--color-background)] text-[var(--color-foreground)]">
+    <div className="min-h-screen bg-background text-foreground">
       <Header />
       <div className="flex h-[calc(100vh-73px)]">
         {/* Sidebar Navigation */}
@@ -28,7 +28,7 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeView, onView
       </div>
       
       {/* Mobile Navigation */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-[var(--color-card)] border-t border-[var(--color-border)] z-50">
+      <div className="md:hidden fixed bottom-0 left-0 right-0 bg-card border-t border-border z-50">
         <div className="grid grid-cols-3 py-2">
           {[
             { id: 'dashboard' as ViewMode, label: 'Dashboard', icon: '📊' },
@@ -40,8 +40,8 @@ export const AppShell: React.FC<AppShellProps> = ({ children, activeView, onView
               onClick={() => onViewChange(item.id)}
               className={`flex flex-col items-center py-2 px-4 transition-colors ${
                 activeView === item.id
-                  ? 'text-[var(--color-primary)]'
-                  : 'text-[var(--color-muted-foreground)]'
+                  ? 'text-primary'
+                  : 'text-muted-foreground'
               }`}
             >
               <span className="text-lg mb-1">{item.icon}</span>

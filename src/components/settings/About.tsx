@@ -1,11 +1,11 @@
-import { Card } from "../shared/Card";
+import { Card } from "#/components/ui/card";
 
 export const About = () => {
 	return (
-		<Card>
+		<Card className="p-6 space-y-6">
 			<div className="mb-6">
 				<h3 className="text-lg font-semibold">About Habitron</h3>
-				<p className="text-sm text-[var(--color-muted-foreground)]">
+				<p className="text-sm text-muted-foreground">
 					A modern habit tracking application that syncs with your daily journal
 				</p>
 			</div>
@@ -13,7 +13,7 @@ export const About = () => {
 			<div className="space-y-6">
 				<div>
 					<h4 className="font-medium mb-2">Features</h4>
-					<ul className="text-sm text-[var(--color-muted-foreground)] space-y-1">
+					<ul className="text-sm text-muted-foreground space-y-1">
 						<li>• Automatic data extraction from journal markdown files</li>
 						<li>• Real-time file watching and synchronization</li>
 						<li>• Beautiful analytics and progress tracking</li>
@@ -29,7 +29,7 @@ export const About = () => {
 							(tech) => (
 								<span
 									key={tech}
-									className="px-3 py-1 text-xs font-medium bg-[var(--color-muted)] text-[var(--color-muted-foreground)] rounded-full"
+									className="px-3 py-1 text-xs font-medium bg-muted text-muted-foreground rounded-full"
 								>
 									{tech}
 								</span>
@@ -40,14 +40,14 @@ export const About = () => {
 
 				<div>
 					<h4 className="font-medium mb-2">Version Information</h4>
-					<div className="text-sm text-[var(--color-muted-foreground)]">
+					<div className="text-sm text-muted-foreground">
 						<p>Version: 1.0.0</p>
 						<p>Last Updated: {new Date().toLocaleDateString()}</p>
 					</div>
 				</div>
 
-				<div className="pt-6 border-t border-[var(--color-border)]">
-					<p className="text-sm text-[var(--color-muted-foreground)] text-center">
+				<div className="pt-6 border-t border-border">
+					<p className="text-sm text-muted-foreground text-center">
 						Built with ❤ for habit tracking enthusiasts
 					</p>
 				</div>
@@ -55,4 +55,3 @@ export const About = () => {
 		</Card>
 	);
 };
-

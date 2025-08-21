@@ -75,7 +75,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 	};
 
 	return (
-		<nav className="bg-[var(--color-card)] border-r border-[var(--color-border)] h-full min-h-screen">
+		<nav className="bg-card border-r border-border h-full min-h-screen">
 			<div className="p-4">
 				<ul className="space-y-2">
 					{navigationItems.map((item) => (
@@ -84,8 +84,8 @@ export const Navigation: React.FC<NavigationProps> = ({
 								onClick={() => onViewChange(item.id)}
 								className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-all duration-200 ${
 									activeView === item.id
-										? "bg-[var(--color-primary)] text-[var(--color-primary-foreground)] shadow-md"
-										: "text-[var(--color-foreground)] hover:bg-[var(--color-muted)] hover:scale-105"
+										? "bg-primary text-primary-foreground shadow-md"
+										: "text-foreground hover:bg-muted hover:scale-105"
 								}`}
 							>
 								{getIcon(item.icon)}

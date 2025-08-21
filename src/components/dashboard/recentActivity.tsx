@@ -41,7 +41,7 @@ export default function RecentActivity() {
 
 	return (
 		<div>
-			<h2 className="text-xl font-semibold mb-6 text-[var(--color-foreground)]">
+			<h2 className="text-xl font-semibold mb-6 text-foreground">
 				Recent Activity
 			</h2>
 			{data.map((item, i) => (
@@ -63,21 +63,23 @@ const RenderBarChart = ({
 			<h2>{habitName}</h2>
 			<ResponsiveContainer width="100%" height={300}>
 				<BarChart width={600} height={300} data={data}>
-					<XAxis dataKey="date" stroke="#8884d8" />
+					<XAxis dataKey="date" stroke="var(--primary)" />
 					<YAxis />
-					<Tooltip wrapperStyle={{ width: 100, backgroundColor: "#ccc" }} />
+					<Tooltip
+						wrapperStyle={{ width: 100, backgroundColor: "var(--card)" }}
+					/>
 					<Legend
 						width={100}
 						wrapperStyle={{
 							top: 40,
 							right: 20,
-							backgroundColor: "#f5f5f5",
-							border: "1px solid #d5d5d5",
+							backgroundColor: "var(--muted)",
+							border: "1px solid var(--border)",
 							borderRadius: 3,
 							lineHeight: "40px",
 						}}
 					/>
-					<Bar dataKey="value" fill="#8884d8" barSize={30} />
+					<Bar dataKey="value" fill="var(--primary)" barSize={30} />
 				</BarChart>
 			</ResponsiveContainer>
 		</div>

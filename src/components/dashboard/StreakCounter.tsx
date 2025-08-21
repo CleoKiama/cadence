@@ -8,7 +8,7 @@ interface StreakCounterProps {
 
 export const StreakCounter: React.FC<StreakCounterProps> = ({ current, longest, metricName }) => {
   return (
-    <div className="bg-gradient-to-r from-[var(--color-primary)] to-[var(--color-accent)] rounded-lg p-6 text-white">
+    <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-6 text-white">
       <h3 className="text-lg font-semibold mb-4">{metricName} Streak</h3>
       
       <div className="flex items-center justify-between">
