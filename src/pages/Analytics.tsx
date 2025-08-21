@@ -1,7 +1,9 @@
 import { useState, useEffect } from "react";
-import { HeatmapDataPoint } from "#/types/metrics";
 import { TrendChart } from "#/components/analytics/TrendChart";
-import { CalendarHeatmap } from "#/components/analytics/CalendarHeatmap";
+import {
+	CalendarHeatmap,
+	HeatmapDataPoint,
+} from "#/components/analytics/CalendarHeatmap";
 import { StatsSummary } from "#/components/analytics/StatsSummary";
 import { Button } from "#/components/ui/button";
 import { getDateRange } from "#/utils/dateUtils";

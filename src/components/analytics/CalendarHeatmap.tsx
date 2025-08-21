@@ -1,7 +1,12 @@
 import React from "react";
-import { HeatmapDataPoint } from "../../types/metrics";
 import { Card } from "#/components/ui/card";
 import { generateDateRange } from "../../utils/dateUtils";
+
+export interface HeatmapDataPoint {
+	date: string;
+	count: number;
+	level: 0 | 1 | 2 | 3 | 4; // Intensity levels for coloring
+}
 
 interface CalendarHeatmapProps {
 	data: HeatmapDataPoint[];
@@ -158,4 +163,3 @@ export const CalendarHeatmap: React.FC<CalendarHeatmapProps> = ({
 		</Card>
 	);
 };
-

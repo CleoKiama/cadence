@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { ViewMode } from "./types/navigation";
 import { ThemeProvider } from "./hooks/useTheme";
 import { AppShell } from "./components/layout/AppShell";
 import { Dashboard } from "./pages/Dashboard";
 import { Analytics } from "./pages/Analytics";
 import { SettingsPage } from "./pages/SettingsPage";
 import "./App.css";
+import { ViewMode } from "./components/layout/Navigation";
 
 function App() {
 	const [activeView, setActiveView] = useState<ViewMode>("dashboard");

@@ -14,26 +14,6 @@ export const formatDisplayDate = (date: string | Date): string => {
 	});
 };
 
-export const getDaysAgo = (days: number): string => {
-	const date = new Date();
-	date.setDate(date.getDate() - days);
-	return formatDate(date);
-};
-
-export const getCurrentWeekRange = () => {
-	const now = new Date();
-	const startOfWeek = new Date(now);
-	startOfWeek.setDate(now.getDate() - now.getDay());
-
-	const endOfWeek = new Date(startOfWeek);
-	endOfWeek.setDate(startOfWeek.getDate() + 6);
-
-	return {
-		start: formatDate(startOfWeek),
-		end: formatDate(endOfWeek),
-	};
-};
-
 export const getDateRange = (days: number) => {
 	const end = new Date();
 	const start = new Date();
@@ -61,4 +41,3 @@ export const generateDateRange = (
 
 	return dates;
 };
-

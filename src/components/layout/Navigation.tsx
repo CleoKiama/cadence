@@ -1,6 +1,6 @@
 import React from "react";
 
-type ViewMode = "dashboard" | "analytics" | "settings";
+export type ViewMode = "dashboard" | "analytics" | "settings";
 
 interface NavigationItem {
 	id: ViewMode;
@@ -98,4 +98,3 @@ export const Navigation: React.FC<NavigationProps> = ({
 		</nav>
 	);
 };
-
