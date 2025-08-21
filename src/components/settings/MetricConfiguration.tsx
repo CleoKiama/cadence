@@ -4,10 +4,19 @@ import z from "zod";
 import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import ChooseJournalDirectory from "./selectJournalPath";
+import { TrackedMetricsEditor } from "./TrackedMetricsEditor";
+import { Button } from "../ui/button";
+import { AddMetricForm } from "./AddMetric";
 import {
-	TrackedMetricsEditor,
-	type MetricFormData,
-} from "./TrackedMetricsEditor";
+	Dialog,
+	DialogContent,
+	DialogDescription,
+	DialogFooter,
+	DialogHeader,
+	DialogTitle,
+	DialogTrigger,
+	DialogClose,
+} from "#/components/ui/dialog";
 
 const TrackedMetricSchema = z.object({
 	name: z.string(),
@@ -16,19 +25,34 @@ const TrackedMetricSchema = z.object({
 	entries: z.number(),
 });
 
+export const trackedMetricsShema = z.array(TrackedMetricSchema);
+
 const settingsSchema = z.object({
 	journalFilesPath: z.string().nullable(),
-	trackedMetrics: z.array(TrackedMetricSchema).optional(),
+	trackedMetrics: trackedMetricsShema.optional(),
 });
 
 type Settings = z.infer<typeof settingsSchema>;
+
+export const metricFormSchema = z.object({
+	name: z
+		.string()
+		.min(1, "Metric name is required")
+		.max(50, "Metric name must be 50 characters or less")
+		.regex(
+			/^[a-zA-Z0-9_]+$/,
+			"Metric name can only contain letters, numbers, and underscores",
+		)
+		.refine(
+			(name) => !name.startsWith("_") && !name.endsWith("_"),
+			"Metric name cannot start or end with underscores",
+		),
+});
 
 export const MetricConfiguration = () => {
 	const [data, setData] = useState<Settings>();
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(true);
-	const [isEditing, setIsEditing] = useState(false);
-	const [operationLoading, setOperationLoading] = useState(false);
 
 	const fetchSettings = async () => {
 		try {
@@ -55,45 +79,22 @@ export const MetricConfiguration = () => {
 	}, []);
 
 	const handlePathChange = () => {
-		// Refresh settings after path change to get updated metrics
 		fetchSettings();
 	};
 
-	const handleAddMetric = async (metricData: MetricFormData) => {
-		setOperationLoading(true);
-		try {
-			// TODO: Replace with actual backend call when ready
-			await new Promise((resolve) => setTimeout(resolve, 1000)); // Simulate API call
-			console.log("Adding metric:", metricData.name);
-
-			// For now, just refresh the data
-			await fetchSettings();
-		} catch (error) {
-			console.error("Failed to add metric:", error);
-			throw error;
-		} finally {
-			setOperationLoading(false);
-		}
+	const handleAddMetric = async (newMetric: string) => {
+		console.log("Adding new metric:", newMetric);
 	};
 
-	const handleDeleteMetric = async (metricName: string) => {
-		setOperationLoading(true);
-		try {
-			// TODO: Replace with actual backend call when ready
-			await new Promise((resolve) => setTimeout(resolve, 500)); // Simulate API call
-			console.log("Deleting metric:", metricName);
-
-			// For now, just refresh the data
-			await fetchSettings();
-		} catch (error) {
-			console.error("Failed to delete metric:", error);
-			throw error;
-		} finally {
-			setOperationLoading(false);
-		}
+	const handleDeleteMetric = (metricName: string) => {
+		console.log("Deleting metric:", metricName);
+	};
+	const handleMetricUpdate = (newName: string) => {
+		console.log("Updating metric to:", newName);
 	};
 
 	if (loading) {
+		//TODO: replace with like backed backed loading thing
 		return <Card className="p-6">Loading settings...</Card>;
 	}
 
@@ -118,25 +119,13 @@ export const MetricConfiguration = () => {
 								journal files
 							</p>
 						</div>
-						{!isEditing && (
-							<button
-								onClick={() => setIsEditing(true)}
-								className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 text-sm font-medium"
-							>
-								Edit Metrics
-							</button>
-						)}
 					</div>
+					<AddMetricForm
+						metrics={data.trackedMetrics || []}
+						onMetricUpdate={handleAddMetric}
+					/>
 
-					{isEditing ? (
-						<TrackedMetricsEditor
-							metrics={data?.trackedMetrics || []}
-							onAddMetric={handleAddMetric}
-							onDeleteMetric={handleDeleteMetric}
-							onCancel={() => setIsEditing(false)}
-							loading={operationLoading}
-						/>
-					) : (
+					{
 						<div className="space-y-4">
 							{data?.trackedMetrics && data.trackedMetrics.length > 0 ? (
 								data.trackedMetrics.map((metric, i) => (
@@ -172,6 +161,14 @@ export const MetricConfiguration = () => {
 											<Badge variant={metric.active ? "secondary" : "default"}>
 												{metric.active ? "Active" : "Inactive"}
 											</Badge>
+											<TrackedMetricsEditor
+												onMetricUpdate={handleMetricUpdate}
+												name={metric.name}
+											/>
+											<DeleteMetric
+												metricName={metric.name}
+												onDelete={handleDeleteMetric}
+											/>
 										</div>
 									</div>
 								))
@@ -182,7 +179,7 @@ export const MetricConfiguration = () => {
 								</div>
 							)}
 						</div>
-					)}
+					}
 
 					<div className="mt-6 p-4 bg-muted border border-border rounded-lg">
 						<h4 className="font-medium text-foreground mb-2">How it works</h4>
@@ -205,5 +202,39 @@ export const MetricConfiguration = () => {
 				</>
 			)}
 		</Card>
+	);
+};
+
+const DeleteMetric = ({
+	metricName,
+	onDelete,
+}: {
+	onDelete: (metricName: string) => void;
+	metricName: string;
+}) => {
+	return (
+		<Dialog>
+			<DialogTrigger>
+				<Button variant="destructive" className="w-full cursor-pointer">
+					Delete
+				</Button>
+			</DialogTrigger>
+			<DialogContent>
+				<DialogHeader>
+					<DialogTitle>Delete Metric</DialogTitle>
+					<DialogDescription className="text-muted-foreground">
+						Are you sure you want to delete the metric: {metricName}
+					</DialogDescription>
+				</DialogHeader>
+				<DialogFooter>
+					<DialogClose asChild>
+						<div className="flex items-center gap-3">
+							<Button onClick={() => onDelete(metricName)}>Confirm</Button>
+							<Button variant="secondary">Cancel</Button>
+						</div>
+					</DialogClose>
+				</DialogFooter>
+			</DialogContent>
+		</Dialog>
 	);
 };
