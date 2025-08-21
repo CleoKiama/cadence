@@ -97,6 +97,8 @@ pub fn run() {
             get_all_analytics_data,
             get_settings,
             set_journal_files_path,
+            delete_metric,
+            udpate_metric
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

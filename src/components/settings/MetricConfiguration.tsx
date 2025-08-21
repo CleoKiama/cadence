@@ -88,9 +88,27 @@ export const MetricConfiguration = () => {
 
 	const handleDeleteMetric = (metricName: string) => {
 		console.log("Deleting metric:", metricName);
+		invoke("delete_metric", { metricName })
+			.then(() => {
+				console.log("Metric deleted successfully");
+				//TODO: fetchSettings(); // Refresh settings after deletion
+			})
+			.catch((err) => console.error("Error Deleting Metric:", err));
 	};
-	const handleMetricUpdate = (newName: string) => {
-		console.log("Updating metric to:", newName);
+	const handleMetricUpdate = ({
+		newName,
+		prevName,
+	}: {
+		newName: string;
+		prevName: string;
+	}) => {
+		console.log(`Updating metric: ${prevName} to:`, newName);
+		invoke("udpate_metric", {
+			prevName,
+			newName,
+		})
+			.then(() => console.log("Metric update successfully"))
+			.catch((e) => console.error("Error updating metric:", e));
 	};
 
 	if (loading) {

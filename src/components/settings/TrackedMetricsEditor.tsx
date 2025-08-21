@@ -16,7 +16,13 @@ import { metricFormSchema } from "./MetricConfiguration";
 
 interface TrackedMetricsEditorProps {
 	name: string;
-	onMetricUpdate: (newName: string) => void;
+	onMetricUpdate: ({
+		newName,
+		prevName,
+	}: {
+		newName: string;
+		prevName: string;
+	}) => void;
 }
 
 export const TrackedMetricsEditor = ({
@@ -46,7 +52,10 @@ export const TrackedMetricsEditor = ({
 			setValidationErrors(errors);
 			return;
 		}
-		onMetricUpdate(trimmedName);
+		onMetricUpdate({
+			newName: trimmedName,
+			prevName: name,
+		});
 		setValidationErrors([]);
 		setIsOpen(false);
 	};
@@ -62,25 +71,19 @@ export const TrackedMetricsEditor = ({
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
 			<DialogTrigger>
-				<Button variant="outline" className="w-full cursor-pointer">
-					Edit
-				</Button>
+				<Button variant="default">Edit</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
 					<DialogTitle>Edit Habit</DialogTitle>
 					<DialogDescription>
-						<div className="space-y-6">
-							<div>
-								<Input
-									type="text"
-									value={newMetricName}
-									onChange={handleInputChange}
-									autoFocus
-								/>
-								<ErrorList errors={validationErrors} />
-							</div>
-						</div>
+						<Input
+							type="text"
+							value={newMetricName}
+							onChange={handleInputChange}
+							autoFocus
+						/>
+						<ErrorList errors={validationErrors} />
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>

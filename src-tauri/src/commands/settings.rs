@@ -1,15 +1,12 @@
 use std::path::Path;
 
 use chrono::{Local, NaiveDate};
+use rusqlite::{fallible_iterator::FallibleIterator, Batch, Result};
 use serde::Serialize;
 
 use crate::{
-    core::read_journal::DB_DATE_TIME_FORMAT, 
-    core::resync_database,
-    core::file_watcher::WatchCommand,
-    db::utils::get_journal_files_path, 
-    DbConnection,
-    WatcherState,
+    core::file_watcher::WatchCommand, core::read_journal::DB_DATE_TIME_FORMAT,
+    core::resync_database, db::utils::get_journal_files_path, DbConnection, WatcherState,
 };
 
 #[derive(Serialize)]
@@ -75,27 +72,37 @@ pub async fn set_journal_files_path(
     }
 
     // Resync database with new path
-    resync_database(&db, path).await.map_err(|e| format!("Failed to resync database: {}", e))?;
+    resync_database(&db, path)
+        .await
+        .map_err(|e| format!("Failed to resync database: {}", e))?;
 
     // Unwatch previous path if it exists
     if let Some(prev_path) = previous_path {
         let sender_opt = {
-            let sender_guard = watcher.lock().map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
+            let sender_guard = watcher
+                .lock()
+                .map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
             sender_guard.clone()
         };
         if let Some(sender) = sender_opt {
-            sender.send(WatchCommand::Unwatch(prev_path)).await
+            sender
+                .send(WatchCommand::Unwatch(prev_path))
+                .await
                 .map_err(|e| format!("Failed to send unwatch command: {}", e))?;
         }
     }
 
     // Watch new path
     let sender_opt = {
-        let sender_guard = watcher.lock().map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
+        let sender_guard = watcher
+            .lock()
+            .map_err(|e| format!("Failed to lock watcher sender: {}", e))?;
         sender_guard.clone()
     };
     if let Some(sender) = sender_opt {
-        sender.send(WatchCommand::Watch(path.to_string())).await
+        sender
+            .send(WatchCommand::Watch(path.to_string()))
+            .await
             .map_err(|e| format!("Failed to send watch command: {}", e))?;
     }
 
@@ -151,4 +158,59 @@ fn get_tracked_metrics(db: &DbConnection) -> Result<Option<Vec<TrackedMetric>>, 
     } else {
         Ok(Some(tracked_metrics))
     }
+}
+
+#[tauri::command]
+pub fn delete_metric(
+    db: tauri::State<'_, DbConnection>,
+    metric_name: String,
+) -> Result<(), String> {
+    let conn = db
+        .lock()
+        .map_err(|e| format!("Failed to lock connection: {}", e))?;
+    let sql = r"
+        DELETE FROM metrics WHERE name = ?1
+        DELETE FROM tracked_metrics WHERE name = ?1
+    ";
+    let mut batch = Batch::new(&conn, sql);
+    while let Some(mut stmt) = batch
+        .next()
+        .map_err(|err| format!("failed to delete metric {}", err))?
+    {
+        stmt.execute([metric_name.clone()])
+            .map_err(|e| format!("failed to delete metric {}", e))?;
+    }
+    println!("Deleted metric: {}", metric_name);
+    Ok(())
+}
+
+#[tauri::command]
+pub fn udpate_metric(
+    db: tauri::State<'_, DbConnection>,
+    prev_name: String,
+    new_name: String,
+) -> Result<(), String> {
+    let conn = db
+        .lock()
+        .map_err(|e| format!("Failed to lock connection: {}", e))?;
+    let sql = r"
+        UPDATE  metrics
+        SET name = ?1
+        WHERE name = ?2;
+
+        UPDATE tracked_metrics 
+        SET value = ?1
+        WHERE value = ?2
+    ";
+    let mut batch = Batch::new(&conn, sql);
+    while let Some(mut stmt) = batch
+        .next()
+        .map_err(|err| format!("failed to delete metric {}", err))?
+    {
+        stmt.execute([new_name.clone(), prev_name.clone()])
+            .map_err(|e| format!("failed to delete metric {}", e))?;
+    }
+    println!("updated the metric from {} to {}", prev_name, new_name);
+    //TODO:: re sync database
+    Ok(())
 }
