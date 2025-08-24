@@ -70,7 +70,7 @@ export const TrackedMetricsEditor = ({
 
 	return (
 		<Dialog open={isOpen} onOpenChange={setIsOpen}>
-			<DialogTrigger>
+			<DialogTrigger asChild>
 				<Button variant="default">Edit</Button>
 			</DialogTrigger>
 			<DialogContent>

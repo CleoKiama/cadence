@@ -83,21 +83,18 @@ export const MetricConfiguration = () => {
 	};
 
 	const handleAddMetric = async (newMetric: string) => {
-		console.log("Adding new metric:", newMetric);
 		invoke("add_metric", { metricName: newMetric })
 			.then(() => {
 				console.log("Metric added successfully");
-				//TODO: fetchSettings(); // Refresh settings after addition
+				void fetchSettings();
 			})
 			.catch((err) => console.error("Error adding metric:", err));
 	};
 
 	const handleDeleteMetric = (metricName: string) => {
-		console.log("Deleting metric:", metricName);
 		invoke("delete_metric", { metricName })
 			.then(() => {
-				console.log("Metric deleted successfully");
-				//TODO: fetchSettings(); // Refresh settings after deletion
+				void fetchSettings();
 			})
 			.catch((err) => console.error("Error Deleting Metric:", err));
 	};
@@ -108,12 +105,13 @@ export const MetricConfiguration = () => {
 		newName: string;
 		prevName: string;
 	}) => {
-		console.log(`Updating metric: ${prevName} to:`, newName);
 		invoke("udpate_metric", {
 			prevName,
 			newName,
 		})
-			.then(() => console.log("Metric update successfully")) //TODO: fetchSettings(); // Refresh settings after update
+			.then(() => {
+				void fetchSettings();
+			})
 			.catch((e) => console.error("Error updating metric:", e));
 	};
 

@@ -1,34 +1,36 @@
 use anyhow::Context;
 use chrono::{DateTime, Utc};
 use rusqlite::params;
-use tokio;
+use std::fs;
+use tauri::{AppHandle, Manager};
 
 use crate::DbConnection;
 
-pub async fn read_dailies_dir(
-    dir_path: &str,
-    db: &DbConnection,
+pub fn read_dailies_dir(
+    dir_path: String,
+    app_handle: AppHandle,
 ) -> Result<Vec<String>, anyhow::Error> {
-    let mut paths = Vec::new();
-    let mut dir_entries = tokio::fs::read_dir(dir_path)
-        .await
-        .with_context(|| format!("Failed to read the directory: {}", dir_path))?;
-    while let Some(entry) = dir_entries.next_entry().await? {
-        read_entry(entry, db, &mut paths).await?;
+    let dir_entries = fs::read_dir(dir_path).with_context(|| "Failed to read the directory")?;
+
+    let mut file_paths = Vec::new();
+    let db = app_handle.state::<DbConnection>();
+
+    for entry in dir_entries {
+        let entry = entry?;
+        if let Some(path) = read_entry(entry, &db)? {
+            file_paths.push(path);
+        }
     }
-    Ok(paths)
+
+    Ok(file_paths)
 }
 
-async fn read_entry(
-    dir_entry: tokio::fs::DirEntry,
-    db: &DbConnection,
-    paths: &mut Vec<String>,
-) -> Result<(), anyhow::Error> {
+fn read_entry(dir_entry: fs::DirEntry, db: &DbConnection) -> Result<Option<String>, anyhow::Error> {
     let path = dir_entry.path();
     if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
         if let Some(file_name) = path.file_name().and_then(|s| s.to_str()) {
             if file_name.starts_with("202") {
-                let metadata = dir_entry.metadata().await.with_context(|| {
+                let metadata = dir_entry.metadata().with_context(|| {
                     format!("Failed to get metadata for file: {}", path.display())
                 })?;
                 let metadata = metadata.modified().with_context(|| {
@@ -51,9 +53,9 @@ async fn read_entry(
                     )
                 })?;
 
-                paths.push(path.to_string_lossy().to_string());
+                return Ok(Some(path.to_string_lossy().to_string()));
             }
         }
     }
-    Ok(())
+    Ok(None)
 }

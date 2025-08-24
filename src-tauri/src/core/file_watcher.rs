@@ -1,12 +1,12 @@
-use anyhow::Result;
-use notify::{recommended_watcher, Event, RecursiveMode, Watcher};
+use notify::{recommended_watcher, RecursiveMode, Watcher};
 use std::{
     collections::HashSet,
     path::Path,
+    sync::mpsc,
+    thread,
+    time::{Duration, Instant},
 };
-use tauri::{async_runtime::{channel, Sender}, AppHandle, Manager};
-
-use crate::DbConnection;
+use tauri::{AppHandle, Manager};
 
 #[derive(Debug)]
 pub enum WatchCommand {
@@ -15,15 +15,15 @@ pub enum WatchCommand {
     Stop,
 }
 
-pub async fn start_watcher(
+pub fn start_watcher(
     app_handle: AppHandle,
     dir: Option<String>,
-) -> notify::Result<Sender<WatchCommand>> {
-    let (event_tx, mut event_rx) = channel(100);
-    let (cmd_tx, mut cmd_rx) = channel::<WatchCommand>(10);
+) -> notify::Result<mpsc::Sender<WatchCommand>> {
+    let (event_tx, event_rx) = mpsc::channel();
+    let (cmd_tx, cmd_rx) = mpsc::channel::<WatchCommand>();
 
     let mut watcher = recommended_watcher(move |res| {
-        let _ = event_tx.blocking_send(res);
+        let _ = event_tx.send(res);
     })
     .map_err(|e| {
         eprintln!("Failed to create watcher: {:?}", e);
@@ -33,14 +33,15 @@ pub async fn start_watcher(
     // Watch the initial directory if provided
     if let Some(dir) = &dir {
         let path = Path::new(dir);
-        if let Err(e) = watcher.watch(path, RecursiveMode::Recursive) {
+        if let Err(e) = watcher.watch(path, RecursiveMode::NonRecursive) {
             eprintln!("Failed to watch initial directory {}: {:?}", dir, e);
-            return Err(e); // Fail early: don't proceed if initial watch fails
+            return Err(e);
         }
     }
 
-    tauri::async_runtime::spawn_blocking(move || -> anyhow::Result<()> {
-        while let Some(cmd) = cmd_rx.blocking_recv() {
+    // Watcher command handler thread
+    thread::spawn(move || -> anyhow::Result<()> {
+        while let Ok(cmd) = cmd_rx.recv() {
             match cmd {
                 WatchCommand::Watch(path) => {
                     println!("Watching {}", path);
@@ -63,56 +64,68 @@ pub async fn start_watcher(
         Ok(())
     });
 
-    // Event handler task
-    let app_handle_clone = app_handle.clone();
-    tokio::spawn(async move {
-        while let Some(event) = event_rx.recv().await {
-            match event {
+    // Event processor thread with buffering
+    thread::spawn(move || {
+        let max_buffer_size = 20;
+        let mut event_buffer: HashSet<String> = HashSet::with_capacity(max_buffer_size);
+        let mut last_flush = Instant::now();
+        let flush_interval = Duration::from_millis(1000);
+        let tx = app_handle.state::<mpsc::SyncSender<String>>().clone();
+
+        while let Ok(event_result) = event_rx.recv() {
+            match event_result {
                 Ok(event) => {
-                    if let Err(e) = sync_data(event, app_handle_clone.clone()).await {
-                        eprintln!("Error syncing data: {e}");
+                    match event.kind {
+                        // TODO:: handle remove event too
+                        notify::EventKind::Create(_) | notify::EventKind::Modify(_) => {
+                            for path in &event.paths {
+                                if path.is_file()
+                                    && path.extension().and_then(|s| s.to_str()) == Some("md")
+                                {
+                                    if let Some(path_str) = path.to_str() {
+                                        event_buffer.insert(path_str.to_string());
+                                    }
+                                }
+                            }
+
+                            // Flush buffer if it's time or if buffer is full
+                            let should_flush = last_flush.elapsed() >= flush_interval
+                                || event_buffer.len() >= max_buffer_size;
+
+                            if should_flush && !event_buffer.is_empty() {
+                                for path in event_buffer.drain() {
+                                    match tx.send(path) {
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            eprintln!(
+                                                "Failed to send file path to sync worker: {}",
+                                                e
+                                            );
+                                        }
+                                    }
+                                }
+                                last_flush = Instant::now();
+                            }
+                        }
+                        _ => continue, // Ignore other event kinds
                     }
                 }
                 Err(err) => eprintln!("Watcher error: {err}"),
             }
         }
+
+        // Process any remaining events
+        if !event_buffer.is_empty() {
+            for path in event_buffer.drain() {
+                match tx.send(path) {
+                    Ok(_) => {}
+                    Err(e) => {
+                        eprintln!("Failed to send file path to sync worker: {}", e);
+                    }
+                }
+            }
+        }
     });
 
     Ok(cmd_tx)
-}
-
-pub async fn sync_data(event: Event, app_handle: AppHandle) -> Result<()> {
-    let mut visited_paths: HashSet<String> = HashSet::new();
-    let db = app_handle.state::<DbConnection>();
-    
-    // Get tracked metrics from database
-    let tracked_metrics = super::get_tracked_metrics_from_db(&db)
-        .map_err(|e| anyhow::anyhow!("Failed to get tracked metrics: {}", e))?;
-    
-    if tracked_metrics.is_empty() {
-        return Ok(());
-    }
-    
-    let needed_metrics: Vec<&str> = tracked_metrics.iter().map(|s| s.as_str()).collect();
-    
-    for path in event.paths {
-        if path.is_file() && path.extension().and_then(|s| s.to_str()) == Some("md") {
-            let file_path = path.to_str();
-            if let Some(file_path) = file_path {
-                if visited_paths.contains(file_path) {
-                    println!("Skipping already visited file: {}", file_path);
-                    continue;
-                }
-                match super::read_journal::read_front_matter(file_path, &needed_metrics, &*db)
-                    .await
-                {
-                    Ok(_) => println!("Successfully processed: {}", file_path),
-                    Err(e) => eprintln!("Error processing {}: {}", file_path, e),
-                }
-
-                visited_paths.insert(file_path.to_string());
-            }
-        }
-    }
-    Ok(())
 }

@@ -1,12 +1,10 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use rusqlite::params;
+use std::fs::{File, metadata};
+use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::time::SystemTime;
-use tokio::fs::metadata;
-use tokio::fs::File;
-use tokio::io::AsyncBufReadExt;
-use tokio::io::BufReader;
 
 use crate::DbConnection;
 
@@ -21,21 +19,22 @@ pub struct Metric {
     pub file_path: String,
 }
 
-pub async fn read_front_matter(
+pub fn read_front_matter(
     path: &str,
-    needed_metrics: &Vec<&str>,
+    needed_metrics: &Vec<String>,
     db: &DbConnection,
 ) -> Result<(), anyhow::Error> {
-    if !should_read_file(path, db).await? {
+    if !should_read_file(path, db)? {
         return Ok(());
     }
 
-    let file = File::open(path).await?;
+    let file = File::open(path)?;
 
     let reader = BufReader::new(file);
-    let mut lines = reader.lines();
+    let lines = reader.lines();
     let mut in_front_matter = false;
-    while let Some(line) = lines.next_line().await? {
+    for line in lines {
+        let line = line?;
         if line.trim().contains("---") {
             if in_front_matter {
                 break;
@@ -83,14 +82,13 @@ fn extract_metric(line: &str, path: &str) -> Result<Metric> {
     }
 }
 
-async fn should_read_file(path: &str, db: &DbConnection) -> Result<bool> {
+fn should_read_file(path: &str, db: &DbConnection) -> Result<bool> {
     let file_path = Path::new(path);
     if !file_path.exists() {
         return Ok(false);
     }
 
     let last_modified: SystemTime = metadata(file_path)
-        .await
         .and_then(|m| m.modified())
         .map_err(|e| anyhow::anyhow!("Failed to get metadata for {}: {}", path, e))?;
 

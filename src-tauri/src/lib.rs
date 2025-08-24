@@ -1,5 +1,5 @@
 use std::env;
-use std::sync::Mutex;
+use std::sync::{mpsc, Mutex};
 
 use rusqlite::Connection;
 use tauri::Manager;
@@ -12,17 +12,17 @@ use commands::analytics::*;
 use commands::dashboard::*;
 use commands::settings::*;
 use commands::streaks::*;
-use db::Db;
 use dotenvy::dotenv;
 
 use crate::commands::recent_activity::get_recent_activity;
 use crate::core::file_watcher::WatchCommand;
+use crate::core::sync_worker::setup_sync_worker;
 use crate::db::utils::get_journal_files_path;
-use tauri::async_runtime::Sender;
+use crate::db::Db;
 
 // Type aliases to prevent runtime panics
 pub type DbConnection = Mutex<Connection>;
-pub type WatcherState = Mutex<Option<Sender<WatchCommand>>>;
+pub type WatcherState = Mutex<Option<mpsc::Sender<WatchCommand>>>;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -47,8 +47,11 @@ pub fn run() {
             }
 
             let watcher: WatcherState = Mutex::new(None);
+            let tx = setup_sync_worker(app.handle().clone());
+
             app.manage(DbConnection::new(db.into_connection()));
             app.manage(watcher);
+            app.manage(tx);
 
             tauri::async_runtime::spawn({
                 let app_handle = app.handle().clone();
@@ -65,13 +68,16 @@ pub fn run() {
                     };
 
                     // Initialize core with optional journal path
-                    match core::init(app_handle.clone(), journal_path).await {
-                        Ok(handle_opt) => {
-                            let watcher_state = app_handle.state::<WatcherState>();
-                            watcher_state.lock().unwrap().replace(handle_opt);
+                    tauri::async_runtime::spawn_blocking({
+                        let app_handle_clone = app_handle.clone();
+                        move || match core::init(app_handle_clone.clone(), journal_path) {
+                            Ok(handle_opt) => {
+                                let watcher_state = app_handle_clone.state::<WatcherState>();
+                                watcher_state.lock().unwrap().replace(handle_opt);
+                            }
+                            Err(e) => eprintln!("Error during core initialization: {}", e),
                         }
-                        Err(e) => eprintln!("Error during core initialization: {}", e),
-                    }
+                    });
 
                     if seed_database {
                         println!("Seeding database here...");
@@ -89,17 +95,20 @@ pub fn run() {
         })
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
+            //dashboard
             get_current_streak,
             get_longest_streak,
             get_dashboard_metrics,
+            // analytics
             get_recent_activity,
             get_analytics_heatmap_data,
             get_all_analytics_data,
+            //settings
             get_settings,
             set_journal_files_path,
             add_metric,
             delete_metric,
-            udpate_metric
+            udpate_metric,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
