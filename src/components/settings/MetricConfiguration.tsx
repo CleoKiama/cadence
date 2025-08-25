@@ -29,7 +29,7 @@ export const trackedMetricsShema = z.array(TrackedMetricSchema);
 
 const settingsSchema = z.object({
 	journalFilesPath: z.string().nullable(),
-	trackedMetrics: trackedMetricsShema.optional(),
+	trackedMetrics: trackedMetricsShema.nullable(),
 });
 
 type Settings = z.infer<typeof settingsSchema>;
