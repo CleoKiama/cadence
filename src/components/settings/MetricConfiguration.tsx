@@ -79,7 +79,7 @@ export const MetricConfiguration = () => {
 	}, []);
 
 	const handlePathChange = () => {
-		fetchSettings();
+		void fetchSettings();
 	};
 
 	const handleAddMetric = async (newMetric: string) => {
@@ -132,6 +132,13 @@ export const MetricConfiguration = () => {
 			/>
 
 			{data?.journalFilesPath && (
+				<AddMetricForm
+					metrics={data?.trackedMetrics || []}
+					onMetricUpdate={handleAddMetric}
+				/>
+			)}
+
+			{data?.journalFilesPath && (
 				<>
 					<div className="mb-6 mt-6 flex items-center justify-between">
 						<div>
@@ -142,10 +149,6 @@ export const MetricConfiguration = () => {
 							</p>
 						</div>
 					</div>
-					<AddMetricForm
-						metrics={data.trackedMetrics || []}
-						onMetricUpdate={handleAddMetric}
-					/>
 
 					{
 						<div className="space-y-4">

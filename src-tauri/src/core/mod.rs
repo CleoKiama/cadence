@@ -91,7 +91,6 @@ pub async fn resync_database(
 
     let file_paths = handle.await??;
     let len = file_paths.len();
-    println!("processing files len: {:#?}", len);
     for (i, path) in file_paths.into_iter().enumerate() {
         let progress = ((i + 1) as f32 / len as f32) * 100.0;
         if tx.send(path).is_ok() {

@@ -235,10 +235,6 @@ pub async fn udpate_metric(
     let journal_path = get_journal_files_path(&db).map_err(|e| e.to_string())?;
 
     if let Some(path) = journal_path {
-        // tauri::async_runtime::spawn_blocking(move || resync_database(app, &path))
-        //     .await
-        //     .map_err(|e| format!("Failed to spawn resync task: {}", e))?
-        //     .map_err(|e| format!("Failed to resync database: {}", e))?;
         resync_database(app, &path)
             .await
             .map_err(|e| format!("Failed to resync database: {}", e))?;

@@ -1,7 +1,7 @@
 use anyhow::{Context, Result};
 use chrono::{DateTime, Local, NaiveDate, Utc};
 use rusqlite::params;
-use std::fs::{File, metadata};
+use std::fs::{metadata, File};
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::time::SystemTime;
@@ -112,17 +112,22 @@ fn should_read_file(path: &str, db: &DbConnection) -> Result<bool> {
     Ok(meta_matches == 0 || metrics_exist == 0)
 }
 
-pub fn write_metric_to_db(metrics: Metric, db: &DbConnection) -> Result<()> {
-    let _ = db.lock().unwrap().execute(
-        "INSERT OR REPLACE INTO metrics (file_path, name, value, date,updated_at) VALUES (?1, ?2, ?3, ?4)",
+pub fn write_metric_to_db(metrics: Metric, db: &DbConnection) -> Result<(), anyhow::Error> {
+    db.lock().unwrap().execute(
+        "INSERT OR REPLACE INTO metrics (file_path, name, value, date,updated_at) VALUES (?1, ?2, ?3, ?4, ?5)",
         params![
             metrics.file_path,
             metrics.name,
             metrics.value,
-            metrics.date.format(DB_DATE_FORMAT).to_string(),
-            Local::now().format(DB_DATE_TIME_FORMAT).to_string()
+            metrics.date.format(DB_DATE_FORMAT).to_string(), //inserted 
+            Local::now().format(DB_DATE_TIME_FORMAT).to_string() // updated at
         ],
-    );
+    ).with_context(|| {
+            format!(
+            "Failed to insert metric {:?} into database",
+            metrics
+        )
+    })?;
     Ok(())
 }
 
