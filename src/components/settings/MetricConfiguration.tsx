@@ -58,7 +58,7 @@ export const MetricConfiguration = () => {
 		try {
 			setLoading(true);
 			const response = await invoke("get_settings");
-			console.log("response", response);
+			// console.log("response", response);
 			const result = settingsSchema.safeParse(response);
 			if (!result.success) {
 				console.error("error validating data", result.error);
@@ -75,7 +75,7 @@ export const MetricConfiguration = () => {
 	};
 
 	useEffect(() => {
-		fetchSettings();
+		void fetchSettings();
 	}, []);
 
 	const handlePathChange = () => {
@@ -85,7 +85,6 @@ export const MetricConfiguration = () => {
 	const handleAddMetric = async (newMetric: string) => {
 		invoke("add_metric", { metricName: newMetric })
 			.then(() => {
-				console.log("Metric added successfully");
 				void fetchSettings();
 			})
 			.catch((err) => console.error("Error adding metric:", err));
@@ -150,61 +149,60 @@ export const MetricConfiguration = () => {
 						</div>
 					</div>
 
-					{
-						<div className="space-y-4">
-							{data?.trackedMetrics && data.trackedMetrics.length > 0 ? (
-								data.trackedMetrics.map((metric, i) => (
-									<div
-										key={i}
-										className="flex items-center justify-between p-4 border border-border rounded-lg"
-									>
-										<div className="flex items-center space-x-4">
-											<div className="p-2 rounded-lg bg-primary text-primary-foreground">
-												💻
+					<div className="space-y-4">
+						{data?.trackedMetrics && data.trackedMetrics.length > 0 ? (
+							data.trackedMetrics.map((metric, i) => (
+								<div
+									key={i}
+									className="flex items-center justify-between p-4 border border-border rounded-lg"
+								>
+									<div className="flex items-center space-x-4">
+										<div className="p-2 rounded-lg bg-primary text-primary-foreground">
+											💻
+										</div>
+										<div>
+											<h4 className="font-medium">{metric.name}</h4>
+											<p className="text-sm text-muted-foreground">
+												Field:{" "}
+												<code className="px-1 py-0.5 bg-muted rounded text-xs">
+													{metric.name}
+												</code>
+											</p>
+										</div>
+									</div>
+
+									<div className="flex items-center gap-3">
+										<div>
+											<div className="text-sm font-medium">
+												{metric.entries} entries
 											</div>
-											<div>
-												<h4 className="font-medium">{metric.name}</h4>
-												<p className="text-sm text-muted-foreground">
-													Field:{" "}
-													<code className="px-1 py-0.5 bg-muted rounded text-xs">
-														{metric.name}
-													</code>
-												</p>
+											<div className="text-xs text-muted-foreground">
+												Last:{" "}
+												{new Date(metric.lastUpdated).toLocaleDateString()}
 											</div>
 										</div>
 
-										<div className="flex items-center space-x-4">
-											<div className="text-right">
-												<div className="text-sm font-medium">
-													{metric.entries} entries
-												</div>
-												<div className="text-xs text-muted-foreground">
-													Last:{" "}
-													{new Date(metric.lastUpdated).toLocaleDateString()}
-												</div>
-											</div>
-											<Badge variant={metric.active ? "secondary" : "default"}>
-												{metric.active ? "Active" : "Inactive"}
-											</Badge>
-											<TrackedMetricsEditor
-												onMetricUpdate={handleMetricUpdate}
-												name={metric.name}
-											/>
-											<DeleteMetric
-												metricName={metric.name}
-												onDelete={handleDeleteMetric}
-											/>
-										</div>
+										<Badge variant={metric.active ? "secondary" : "default"}>
+											{metric.active ? "Active" : "Inactive"}
+										</Badge>
+										<TrackedMetricsEditor
+											onMetricUpdate={handleMetricUpdate}
+											name={metric.name}
+										/>
+										<UntrackMetric
+											metricName={metric.name}
+											onUntrack={handleDeleteMetric}
+										/>
 									</div>
-								))
-							) : (
-								<div className="p-4 text-center text-muted-foreground">
-									No metrics found yet. Add some frontmatter to your journal
-									files to get started.
 								</div>
-							)}
-						</div>
-					}
+							))
+						) : (
+							<div className="p-4 text-center text-muted-foreground">
+								No metrics found yet. Add some frontmatter to your journal files
+								to get started.
+							</div>
+						)}
+					</div>
 
 					<div className="mt-6 p-4 bg-muted border border-border rounded-lg">
 						<h4 className="font-medium text-foreground mb-2">How it works</h4>
@@ -230,31 +228,38 @@ export const MetricConfiguration = () => {
 	);
 };
 
-const DeleteMetric = ({
+const UntrackMetric = ({
 	metricName,
-	onDelete,
+	onUntrack,
 }: {
-	onDelete: (metricName: string) => void;
+	onUntrack: (metricName: string) => void;
 	metricName: string;
 }) => {
 	return (
 		<Dialog>
-			<DialogTrigger>
-				<Button variant="destructive" className="w-full cursor-pointer">
-					Delete
+			<DialogTrigger asChild>
+				<Button variant="secondary" className="cursor-pointer">
+					Untrack
 				</Button>
 			</DialogTrigger>
 			<DialogContent>
 				<DialogHeader>
-					<DialogTitle>Delete Metric</DialogTitle>
+					<DialogTitle>Untrack Metric</DialogTitle>
 					<DialogDescription className="text-muted-foreground">
-						Are you sure you want to delete the metric: {metricName}
+						This will stop syncing{" "}
+						<span className="font-semibold">{metricName}</span> from your notes.
+						Past data may be removed.
 					</DialogDescription>
 				</DialogHeader>
 				<DialogFooter>
 					<DialogClose asChild>
 						<div className="flex items-center gap-3">
-							<Button onClick={() => onDelete(metricName)}>Confirm</Button>
+							<Button
+								onClick={() => onUntrack(metricName)}
+								variant="destructive"
+							>
+								Confirm
+							</Button>
 							<Button variant="secondary">Cancel</Button>
 						</div>
 					</DialogClose>
