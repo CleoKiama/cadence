@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ThemeProvider } from "./hooks/useTheme";
+import { NavigationProvider, useNavigationContext } from "./contexts/NavigationContext";
 import { AppShell } from "./components/layout/AppShell";
 import { Dashboard } from "./pages/Dashboard";
 import { Analytics } from "./pages/Analytics";
 import { SettingsPage } from "./pages/SettingsPage";
 import "./App.css";
-import { ViewMode } from "./components/layout/Navigation";
 
-function App() {
-	const [activeView, setActiveView] = useState<ViewMode>("dashboard");
+function AppContent() {
+	const { activeView, setActiveView } = useNavigationContext();
 	const [isJournalConfigured, setIsJournalConfigured] = useState<boolean | null>(null);
 
 	useEffect(() => {
@@ -28,7 +28,7 @@ function App() {
 		};
 
 		checkJournalPath();
-	}, []);
+	}, [setActiveView]);
 
 	const renderCurrentView = () => {
 		switch (activeView) {
@@ -45,19 +45,25 @@ function App() {
 
 	if (isJournalConfigured === null) {
 		return (
-			<ThemeProvider>
-				<div className="flex items-center justify-center h-screen">
-					<div className="text-lg">Loading...</div>
-				</div>
-			</ThemeProvider>
+			<div className="flex items-center justify-center h-screen">
+				<div className="text-lg">Loading...</div>
+			</div>
 		);
 	}
 
 	return (
+		<AppShell activeView={activeView} onViewChange={setActiveView}>
+			{renderCurrentView()}
+		</AppShell>
+	);
+}
+
+function App() {
+	return (
 		<ThemeProvider>
-			<AppShell activeView={activeView} onViewChange={setActiveView}>
-				{renderCurrentView()}
-			</AppShell>
+			<NavigationProvider>
+				<AppContent />
+			</NavigationProvider>
 		</ThemeProvider>
 	);
 }

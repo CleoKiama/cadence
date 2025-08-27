@@ -22,9 +22,14 @@ pub struct HabitData {
 #[tauri::command]
 pub fn get_recent_activity(
     db: State<'_, DbConnection>,
-) -> Result<Vec<HabitData>, String> {
+) -> Result<Option<Vec<HabitData>>, String> {
     let data = get_recent_activity_date(&db).map_err(|e| e.to_string())?;
-    Ok(data)
+    
+    if data.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(data))
+    }
 }
 
 fn get_recent_activity_date(

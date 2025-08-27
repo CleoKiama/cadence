@@ -1,12 +1,28 @@
 import React from 'react';
+import { Skeleton } from '#/components/ui/skeleton';
 
 interface StreakCounterProps {
-  current: number;
-  longest: number;
+  current: number | null;
+  longest: number | null;
   metricName: string;
+  loading?: boolean;
 }
 
-export const StreakCounter: React.FC<StreakCounterProps> = ({ current, longest, metricName }) => {
+export const StreakCounter: React.FC<StreakCounterProps> = ({ 
+  current, 
+  longest, 
+  metricName, 
+  loading = false 
+}) => {
+  if (loading) {
+    return <Skeleton className="h-32 w-full rounded-lg" />;
+  }
+
+  // Don't render if we don't have streak data
+  if (current === null || longest === null) {
+    return null;
+  }
+
   return (
     <div className="bg-gradient-to-r from-primary to-accent rounded-lg p-6 text-white">
       <h3 className="text-lg font-semibold mb-4">{metricName} Streak</h3>

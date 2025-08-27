@@ -8,6 +8,7 @@ import {
 	Legend,
 	ResponsiveContainer,
 } from "recharts";
+import { Skeleton } from "#/components/ui/skeleton";
 import z from "zod";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -21,23 +22,53 @@ const DataSchema = z.array(
 		habitName: z.string(),
 		data: z.array(MetricSchema),
 	}),
-);
+).nullable();
 
 type Data = z.infer<typeof DataSchema>;
 
 export default function RecentActivity() {
-	const [data, setData] = useState<Data>([]);
+	const [data, setData] = useState<Data>(null);
+	const [loading, setLoading] = useState(true);
+
 	useEffect(() => {
-		invoke("get_recent_activity").then((resData) => {
-			const result = DataSchema.safeParse(resData);
-			if (!result.success) {
-				console.error("Data validation failed:", result.error);
-				console.log(result.data);
-				return;
+		const fetchData = async () => {
+			try {
+				setLoading(true);
+				const resData = await invoke<Data>("get_recent_activity");
+				const result = DataSchema.safeParse(resData);
+				if (!result.success) {
+					console.error("Data validation failed:", result.error);
+					setData(null);
+					return;
+				}
+				setData(result.data);
+			} catch (error) {
+				console.error("Error fetching recent activity:", error);
+				setData(null);
+			} finally {
+				setLoading(false);
 			}
-			setData(result.data);
-		});
+		};
+
+		fetchData();
 	}, []);
+
+	if (loading) {
+		return (
+			<div>
+				<Skeleton className="h-6 w-40 mb-6" />
+				<div className="space-y-4">
+					<Skeleton className="h-8 w-48" />
+					<Skeleton className="h-64 w-full rounded-lg" />
+				</div>
+			</div>
+		);
+	}
+
+	// Don't render if no data
+	if (!data || data.length === 0) {
+		return null;
+	}
 
 	return (
 		<div>

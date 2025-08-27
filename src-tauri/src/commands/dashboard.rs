@@ -30,10 +30,14 @@ pub struct DashboardMetrics {
 }
 
 #[tauri::command]
-pub fn get_dashboard_metrics(db: State<'_, DbConnection>) -> Result<Vec<DashboardMetrics>, String> {
+pub fn get_dashboard_metrics(db: State<'_, DbConnection>) -> Result<Option<Vec<DashboardMetrics>>, String> {
     let habit_metrics = get_habit_metrics(&db)?;
 
-    Ok(habit_metrics)
+    if habit_metrics.is_empty() {
+        Ok(None)
+    } else {
+        Ok(Some(habit_metrics))
+    }
 }
 
 fn get_habit_metrics(db: &DbConnection) -> Result<Vec<DashboardMetrics>, String> {

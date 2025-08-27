@@ -5,12 +5,14 @@ import {
 	HeatmapDataPoint,
 } from "#/components/analytics/CalendarHeatmap";
 import { StatsSummary } from "#/components/analytics/StatsSummary";
+import { EmptyState } from "#/components/shared/EmptyState";
 import { Button } from "#/components/ui/button";
+import { useNavigationContext } from "#/contexts/NavigationContext";
 import { getDateRange } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { type MetricSummary } from "#/components/dashboard/MetricGrid";
-import { Loader2 } from "lucide-react";
+import { Loader2, TrendingUp, Settings } from "lucide-react";
 
 const ChartDataSchema = z.object({
 	habitName: z.string(),
@@ -40,13 +42,14 @@ export const Analytics = () => {
 	const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
 		"30d",
 	);
-	const [chartData, setChartData] = useState<ChartData[]>([]);
+	const [chartData, setChartData] = useState<ChartData[] | null>(null);
 	const [heatmapData, setHeatmapData] = useState<{
 		[key: string]: HeatmapDataPoint[];
 	}>({});
-	const [metrics, setMetrics] = useState<MetricSummary[]>([]);
+	const [metrics, setMetrics] = useState<MetricSummary[] | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
+	const { navigateToSettings } = useNavigationContext();
 
 	const timeRangeOptions = [
 		{ value: "7d" as const, label: "7 Days", days: 7 },
@@ -66,42 +69,57 @@ export const Analytics = () => {
 			setError(null);
 
 			// Fetch dashboard metrics for summary
-			const dashboardMetrics = await invoke<MetricSummary[]>(
+			const dashboardMetrics = await invoke<MetricSummary[] | null>(
 				"get_dashboard_metrics",
 			);
-			const parsedMetrics: MetricSummary[] = dashboardMetrics;
-			setMetrics(parsedMetrics);
+			setMetrics(dashboardMetrics);
+
+			// If no metrics, don't proceed with other data fetching
+			if (!dashboardMetrics || dashboardMetrics.length === 0) {
+				setChartData(null);
+				setHeatmapData({});
+				return;
+			}
 
 			// Fetch all analytics trend data
-			const allTrendData = await invoke<ChartData[]>("get_all_analytics_data", {
+			const allTrendData = await invoke<ChartData[] | null>("get_all_analytics_data", {
 				days,
 			});
-			const validatedTrendData = allTrendData.map((data) =>
-				ChartDataSchema.parse(data),
-			);
-
-			setChartData(validatedTrendData);
+			
+			if (allTrendData) {
+				const validatedTrendData = allTrendData.map((data) =>
+					ChartDataSchema.parse(data),
+				);
+				setChartData(validatedTrendData);
+			} else {
+				setChartData(null);
+			}
 
 			// Fetch heatmap data for each habit
 			const newHeatmapData: { [key: string]: HeatmapDataPoint[] } = {};
-			for (const metric of parsedMetrics) {
+			for (const metric of dashboardMetrics) {
 				try {
-					const heatmapResult = await invoke<AnalyticsHeatmapData>(
+					const heatmapResult = await invoke<AnalyticsHeatmapData | null>(
 						"get_analytics_heatmap_data",
 						{
 							habitName: metric.name,
 							days,
 						},
 					);
-					const validatedHeatmapData =
-						AnalyticsHeatmapDataSchema.parse(heatmapResult);
-					newHeatmapData[metric.name] = validatedHeatmapData.data.map(
-						(point) => ({
-							date: point.date,
-							count: point.count,
-							level: point.level as 0 | 1 | 2 | 3 | 4,
-						}),
-					);
+					
+					if (heatmapResult) {
+						const validatedHeatmapData =
+							AnalyticsHeatmapDataSchema.parse(heatmapResult);
+						newHeatmapData[metric.name] = validatedHeatmapData.data.map(
+							(point) => ({
+								date: point.date,
+								count: point.count,
+								level: point.level as 0 | 1 | 2 | 3 | 4,
+							}),
+						);
+					} else {
+						newHeatmapData[metric.name] = [];
+					}
 				} catch (err) {
 					console.warn(`Failed to fetch heatmap data for ${metric.name}:`, err);
 					newHeatmapData[metric.name] = [];
@@ -120,7 +138,7 @@ export const Analytics = () => {
 
 	useEffect(() => {
 		fetchAnalyticsData(currentRange.days);
-	}, [timeRange]);
+	}, [timeRange, currentRange.days]);
 
 	if (loading) {
 		return (
@@ -138,6 +156,34 @@ export const Analytics = () => {
 				<div className="flex justify-center items-center h-64">
 					<div className="text-destructive">Error: {error}</div>
 				</div>
+			</div>
+		);
+	}
+
+	// Show empty state if no metrics are tracked
+	if (!metrics || metrics.length === 0) {
+		return (
+			<div className="space-y-8">
+				<div className="flex justify-between items-center">
+					<div>
+						<h1 className="text-2xl font-bold text-foreground">Analytics</h1>
+						<p className="text-muted-foreground">
+							Detailed insights into your habit tracking progress
+						</p>
+					</div>
+				</div>
+				
+				<EmptyState
+					icon={<TrendingUp className="h-12 w-12 text-muted-foreground mx-auto" />}
+					title="No Analytics Data"
+					description="Start tracking your habits to see detailed analytics, trends, and insights about your progress."
+					action={
+						<Button onClick={navigateToSettings} size="lg">
+							<Settings className="mr-2 h-4 w-4" />
+							Add Metrics
+						</Button>
+					}
+				/>
 			</div>
 		);
 	}
@@ -175,46 +221,50 @@ export const Analytics = () => {
 			/>
 
 			{/* Trend Charts */}
-			<div>
-				<h2 className="text-xl font-semibold mb-6 text-foreground">
-					Trends Over Time
-				</h2>
-				<div className="space-y-6">
-					{chartData.map(({ habitName, data }, i) => {
-						return (
-							<TrendChart
-								key={i}
-								title={`${habitName} Trend`}
-								metricName={habitName}
-								data={data}
-								color="var(--chart-1)"
-							/>
-						);
-					})}
+			{chartData && chartData.length > 0 && (
+				<div>
+					<h2 className="text-xl font-semibold mb-6 text-foreground">
+						Trends Over Time
+					</h2>
+					<div className="space-y-6">
+						{chartData.map(({ habitName, data }, i) => {
+							return (
+								<TrendChart
+									key={i}
+									title={`${habitName} Trend`}
+									metricName={habitName}
+									data={data}
+									color="var(--chart-1)"
+								/>
+							);
+						})}
+					</div>
 				</div>
-			</div>
+			)}
 
 			{/* Activity Heatmaps */}
-			<div>
-				<h2 className="text-xl font-semibold mb-6 text-foreground">
-					Activity Heatmaps
-				</h2>
-				<div className="space-y-6">
-					{Object.entries(heatmapData).map(([metricName, data]) => {
-						const metric = metrics.find((m) => m.name === metricName);
+			{Object.keys(heatmapData).length > 0 && (
+				<div>
+					<h2 className="text-xl font-semibold mb-6 text-foreground">
+						Activity Heatmaps
+					</h2>
+					<div className="space-y-6">
+						{Object.entries(heatmapData).map(([metricName, data]) => {
+							const metric = metrics.find((m) => m.name === metricName);
 
-						return (
-							<CalendarHeatmap
-								key={metricName}
-								title={`${metric?.displayName || metricName} Activity`}
-								data={data}
-								startDate={dateRange.start}
-								endDate={dateRange.end}
-							/>
-						);
-					})}
+							return (
+								<CalendarHeatmap
+									key={metricName}
+									title={`${metric?.displayName || metricName} Activity`}
+									data={data}
+									startDate={dateRange.start}
+									endDate={dateRange.end}
+								/>
+							);
+						})}
+					</div>
 				</div>
-			</div>
+			)}
 		</div>
 	);
 };

@@ -46,9 +46,13 @@ pub fn get_analytics_heatmap_data(
     db: State<'_, DbConnection>,
     habit_name: String,
     days: u32,
-) -> Result<AnalyticsHeatmapData, String> {
+) -> Result<Option<AnalyticsHeatmapData>, String> {
     let heatmap_data =
         get_habit_heatmap_data(&db, &habit_name, days).map_err(|e| e.to_string())?;
+
+    if heatmap_data.is_empty() {
+        return Ok(None);
+    }
 
     let chart_data = heatmap_data
         .into_iter()
@@ -59,18 +63,22 @@ pub fn get_analytics_heatmap_data(
         })
         .collect();
 
-    Ok(AnalyticsHeatmapData {
+    Ok(Some(AnalyticsHeatmapData {
         habit_name,
         data: chart_data,
-    })
+    }))
 }
 
 #[tauri::command]
 pub fn get_all_analytics_data(
     db: State<'_, DbConnection>,
     days: u32,
-) -> Result<Vec<AnalyticsTrendData>, String> {
+) -> Result<Option<Vec<AnalyticsTrendData>>, String> {
     let all_data = get_all_habits_analytics(&db, days).map_err(|e| e.to_string())?;
+
+    if all_data.is_empty() {
+        return Ok(None);
+    }
 
     let result = all_data
         .into_iter()
@@ -90,5 +98,5 @@ pub fn get_all_analytics_data(
         })
         .collect();
 
-    Ok(result)
+    Ok(Some(result))
 }
