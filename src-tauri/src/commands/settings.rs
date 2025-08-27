@@ -202,6 +202,12 @@ pub async fn add_metric(
 }
 
 #[tauri::command]
+pub fn is_journal_path_configured(db: tauri::State<'_, DbConnection>) -> Result<bool, String> {
+    let journal_path = get_journal_files_path(&db).map_err(|e| e.to_string())?;
+    Ok(journal_path.is_some())
+}
+
+#[tauri::command]
 pub async fn udpate_metric(
     app: AppHandle,
     db: tauri::State<'_, DbConnection>,

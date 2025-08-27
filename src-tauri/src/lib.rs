@@ -105,6 +105,7 @@ pub fn run() {
             get_all_analytics_data,
             //settings
             get_settings,
+            is_journal_path_configured,
             set_journal_files_path,
             add_metric,
             delete_metric,
