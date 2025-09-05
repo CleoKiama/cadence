@@ -13,16 +13,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { type MetricSummary } from "#/components/dashboard/MetricGrid";
 import { Loader2, TrendingUp, Settings } from "lucide-react";
-
-const ChartDataSchema = z.object({
-	habitName: z.string(),
-	data: z.array(
-		z.object({
-			date: z.string(),
-			value: z.number(),
-		}),
-	),
-});
+import { ChartDataSchema, fetchHabitTrends } from "#/utils/analytics_data";
+import { tryCatch } from "#/lib/utils";
 
 const HeatmapPointSchema = z.object({
 	date: z.string(),
@@ -81,19 +73,10 @@ export const Analytics = () => {
 				return;
 			}
 
-			// Fetch all analytics trend data
-			const allTrendData = await invoke<ChartData[] | null>("get_all_analytics_data", {
-				days,
-			});
-			
-			if (allTrendData) {
-				const validatedTrendData = allTrendData.map((data) =>
-					ChartDataSchema.parse(data),
-				);
-				setChartData(validatedTrendData);
-			} else {
-				setChartData(null);
-			}
+			// Fetch all analytic trend data
+			const { data, error } = await tryCatch(fetchHabitTrends(days));
+			if (error) throw error;
+			setChartData(data);
 
 			// Fetch heatmap data for each habit
 			const newHeatmapData: { [key: string]: HeatmapDataPoint[] } = {};
@@ -106,7 +89,7 @@ export const Analytics = () => {
 							days,
 						},
 					);
-					
+
 					if (heatmapResult) {
 						const validatedHeatmapData =
 							AnalyticsHeatmapDataSchema.parse(heatmapResult);
@@ -172,9 +155,11 @@ export const Analytics = () => {
 						</p>
 					</div>
 				</div>
-				
+
 				<EmptyState
-					icon={<TrendingUp className="h-12 w-12 text-muted-foreground mx-auto" />}
+					icon={
+						<TrendingUp className="h-12 w-12 text-muted-foreground mx-auto" />
+					}
 					title="No Analytics Data"
 					description="Start tracking your habits to see detailed analytics, trends, and insights about your progress."
 					action={
