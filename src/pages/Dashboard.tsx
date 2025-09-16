@@ -11,6 +11,10 @@ import { formatDisplayDate } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { type MetricSummary } from "#/components/dashboard/MetricGrid";
 import { AlertCircle, Settings } from "lucide-react";
+import { ChartDataSchema, fetchHabitTrends } from "#/utils/analytics_data";
+import z from "zod";
+import { tryCatch } from "#/lib/utils";
+import StreakGrid from "#/components/dashboard/streakGrid";
 
 interface DashboardProps {
 	habitName: string;
@@ -20,20 +24,22 @@ interface DashboardState {
 	hasMetrics: boolean | null;
 	currentStreak: number | null;
 	longestStreak: number | null;
-	primaryHabitName: string | null;
 	loading: boolean;
 	error: string | null;
 }
+
+type StreakGridData = z.infer<typeof ChartDataSchema>;
 
 export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 	const [dashboardState, setDashboardState] = useState<DashboardState>({
 		hasMetrics: null,
 		currentStreak: null,
 		longestStreak: null,
-		primaryHabitName: null,
 		loading: true,
 		error: null,
 	});
+
+	const [streakGridData, setStreakGridData] = useState<StreakGridData[]>([]);
 
 	const { navigateToSettings } = useNavigationContext();
 
@@ -57,6 +63,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 				}
 
 				// 2. We have metrics, set hasMetrics to true
+				// TODO: Update to a carousel with multiple habits
 				const primaryHabit = metrics[0].name; // Use first metric as primary for streaks
 				setDashboardState((prev) => ({
 					...prev,
@@ -80,6 +87,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 					longestStreak: longestStreakResult,
 					loading: false,
 				}));
+
+				//TODO: fetch data based on number of days of the current month
+				const { data, error } = await tryCatch(fetchHabitTrends(30));
+				if (error) throw error;
+				setStreakGridData(data);
 			} catch (error) {
 				console.error("Failed to fetch dashboard data:", error);
 				setDashboardState((prev) => ({
@@ -143,6 +155,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 		return <DashboardEmptyState />;
 	}
 
+	const streakGridItems = streakGridData.map((item, index) => (
+		<StreakGrid key={index} data={item.data} habitName={habitName} />
+	));
+
 	// Full dashboard with data
 	return (
 		<div className="space-y-8">
@@ -155,16 +171,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 					{formatDisplayDate(new Date())} • Track your habits, build your future
 				</p>
 			</div>
+			<StreakCounter
+				current={dashboardState.currentStreak}
+				longest={dashboardState.longestStreak}
+				metricName={habitName}
+			/>
 
-			{dashboardState.primaryHabitName && (
-				<StreakCounter
-					current={dashboardState.currentStreak}
-					longest={dashboardState.longestStreak}
-					metricName={dashboardState.primaryHabitName}
-				/>
-			)}
-
+			{/* Metrics summary grid cards */}
 			<MetricGrid />
+
+			{/* streak grid */}
+			{streakGridData && streakGridData.length > 0 && (
+				<div className="grid grid-cols-3 gap-2">{streakGridItems}</div>
+			)}
 
 			<RecentActivity />
 		</div>

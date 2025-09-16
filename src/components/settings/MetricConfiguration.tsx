@@ -17,6 +17,7 @@ import {
 	DialogTrigger,
 	DialogClose,
 } from "#/components/ui/dialog";
+import { Loader2 } from "lucide-react";
 
 const TrackedMetricSchema = z.object({
 	name: z.string(),
@@ -52,7 +53,7 @@ export const metricFormSchema = z.object({
 export const MetricConfiguration = () => {
 	const [data, setData] = useState<Settings>();
 	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(false);
 
 	const fetchSettings = async () => {
 		try {
@@ -116,7 +117,7 @@ export const MetricConfiguration = () => {
 
 	if (loading) {
 		//TODO: replace with like backed backed loading thing
-		return <Card className="p-6">Loading settings...</Card>;
+		return <Loader2 className="animate-spin" />;
 	}
 
 	if (error) {
@@ -238,7 +239,7 @@ const UntrackMetric = ({
 	return (
 		<Dialog>
 			<DialogTrigger asChild>
-				<Button variant="secondary" className="cursor-pointer">
+				<Button variant="outline" className="cursor-pointer">
 					Untrack
 				</Button>
 			</DialogTrigger>

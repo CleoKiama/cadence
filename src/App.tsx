@@ -1,7 +1,10 @@
 import { useState, useEffect } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { ThemeProvider } from "./hooks/useTheme";
-import { NavigationProvider, useNavigationContext } from "./contexts/NavigationContext";
+import {
+	NavigationProvider,
+	useNavigationContext,
+} from "./contexts/NavigationContext";
 import { AppShell } from "./components/layout/AppShell";
 import { Dashboard } from "./pages/Dashboard";
 import { Analytics } from "./pages/Analytics";
@@ -10,12 +13,16 @@ import "./App.css";
 
 function AppContent() {
 	const { activeView, setActiveView } = useNavigationContext();
-	const [isJournalConfigured, setIsJournalConfigured] = useState<boolean | null>(null);
+	const [isJournalConfigured, setIsJournalConfigured] = useState<
+		boolean | null
+	>(null);
 
 	useEffect(() => {
 		const checkJournalPath = async () => {
 			try {
-				const isConfigured = await invoke<boolean>("is_journal_path_configured");
+				const isConfigured = await invoke<boolean>(
+					"is_journal_path_configured",
+				);
 				setIsJournalConfigured(isConfigured);
 				if (!isConfigured) {
 					setActiveView("settings");
@@ -33,7 +40,7 @@ function AppContent() {
 	const renderCurrentView = () => {
 		switch (activeView) {
 			case "dashboard":
-				return <Dashboard habitName="dsa_problems_solved" />;
+				return <Dashboard habitName="Example habit" />;
 			case "analytics":
 				return <Analytics />;
 			case "settings":
