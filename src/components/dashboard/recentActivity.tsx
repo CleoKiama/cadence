@@ -1,14 +1,6 @@
 import { useEffect, useState } from "react";
-import {
-	BarChart,
-	Bar,
-	XAxis,
-	YAxis,
-	Tooltip,
-	Legend,
-	ResponsiveContainer,
-} from "recharts";
 import { Skeleton } from "#/components/ui/skeleton";
+import D3BarChart from "#/components/shared/D3BarChart";
 import z from "zod";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -76,43 +68,8 @@ export default function RecentActivity() {
 				Recent Activity
 			</h2>
 			{data.map((item, i) => (
-				<RenderBarChart key={i} habitName={item.habitName} data={item.data} />
+				<D3BarChart key={i} habitName={item.habitName} data={item.data} />
 			))}
 		</div>
 	);
 }
-
-const RenderBarChart = ({
-	habitName,
-	data,
-}: {
-	habitName: string;
-	data: Array<z.infer<typeof MetricSchema>>;
-}) => {
-	return (
-		<div>
-			<h2>{habitName}</h2>
-			<ResponsiveContainer width="100%" height={300}>
-				<BarChart width={600} height={300} data={data}>
-					<XAxis dataKey="date" stroke="var(--primary)" />
-					<YAxis />
-					<Tooltip
-						wrapperStyle={{ width: 100, backgroundColor: "var(--card)" }}
-					/>
-					<Legend
-						width={100}
-						wrapperStyle={{
-							top: 40,
-							right: 20,
-							backgroundColor: "var(--muted)",
-							border: "1px solid var(--border)",
-							borderRadius: 3,
-							lineHeight: "40px",
-						}}
-					/>
-					<Bar dataKey="value" fill="var(--primary)" barSize={30} />
-				</BarChart>
-			</ResponsiveContainer>
-		</div>
-	);
-};
