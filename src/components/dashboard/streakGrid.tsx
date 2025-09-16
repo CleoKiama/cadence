@@ -12,50 +12,53 @@ const baseHeight = 500;
 export default function StreakGrid({ data, habitName }: MetricData) {
 	const svgRef = useRef<SVGSVGElement | null>(null);
 	const containerRef = useRef<HTMLDivElement | null>(null);
-	const [dimensions, setDimensions] = useState({ width: baseWidth, height: baseHeight });
+	const [dimensions, setDimensions] = useState({
+		width: baseWidth,
+		height: baseHeight,
+	});
 
 	useEffect(() => {
 		const updateDimensions = () => {
 			if (containerRef.current) {
 				const containerWidth = containerRef.current.clientWidth;
-				
+
 				// Maintain aspect ratio but scale to container
 				const aspectRatio = baseWidth / baseHeight;
 				let newWidth = containerWidth;
 				let newHeight = containerWidth / aspectRatio;
-				
+
 				// Ensure minimum size for readability
 				const minSize = 200;
 				if (newWidth < minSize) {
 					newWidth = minSize;
 					newHeight = minSize / aspectRatio;
 				}
-				
+
 				setDimensions({ width: newWidth, height: newHeight });
 			}
 		};
 
 		updateDimensions();
-		
+
 		const resizeObserver = new ResizeObserver(updateDimensions);
 		if (containerRef.current) {
 			resizeObserver.observe(containerRef.current);
 		}
-		
+
 		return () => resizeObserver.disconnect();
 	}, []);
 
 	useEffect(() => {
 		if (!svgRef.current || !data.length) return;
-		
+
 		const { width, height } = dimensions;
 		const daysInWeek = 7;
-		
+
 		// Scale factors based on container size
 		const scaleFactor = Math.min(width, height) / baseWidth;
 		const dotRadius = Math.max(8, 16 * scaleFactor); // Min 8px, scales up
 		const rowPadding = 80 * scaleFactor;
-		
+
 		// Responsive positioning
 		const monthAndMetricY = height * 0.08; // 8% from top
 		const labelsY = height * 0.15; // 15% from top
@@ -82,7 +85,8 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 		const grid = data.map((d, i) => {
 			const col = i % daysInWeek;
 			const row = Math.floor(i / daysInWeek);
-			const day = new Date(d.date).getDay();
+			const day = new Date(d.date).getDate();
+
 			return {
 				...d,
 				row,
@@ -94,13 +98,13 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 
 		//INFO:: remove everything to avoid duplicates on rerenders
 		svg.selectAll("*").remove();
-		
+
 		// Responsive font sizes
 		const titleFontSize = Math.max(12, 20 * scaleFactor);
 		const monthFontSize = Math.max(10, 16 * scaleFactor);
 		const dayFontSize = Math.max(8, 14 * scaleFactor);
 		const valueFontSize = Math.max(6, 12 * scaleFactor);
-		
+
 		// Metric label
 		svg
 			.append("text")
@@ -162,7 +166,7 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 			.attr("cx", (d) => xScale(d.col))
 			.attr("cy", (d) => yScale(d.row))
 			.attr("r", dotRadius)
-			.attr("fill", "hsl(var(--primary))");
+			.attr("fill", "#90EE90");
 
 		svg
 			.selectAll("dot-value")
@@ -175,7 +179,7 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 			.attr("text-anchor", "middle")
 			.attr("dy", ".35em")
 			.style("font-size", `${valueFontSize}px`)
-			.style("fill", "hsl(var(--primary-foreground))");
+			.style("fill", "white");
 
 		svg
 			.selectAll("dot-streak-line")
@@ -191,11 +195,12 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 				const end = xScale(d.col + 1); //start of next dot
 				const dotSpacing = xScale(1) - xScale(0); //Distance between centers
 
+				//x2 will be half the normal distance between two dots from the start of t where the next dot would be
 				if (d.col === daysInWeek - 1) return end - Math.floor(dotSpacing / 2);
-				return end;
+				return end - dotRadius; // remove the dotradius to avoid the line going into the next circle
 			}) //start next dot
 			.attr("y2", (d) => yScale(d.row))
-			.attr("stroke", "hsl(var(--primary))")
+			.attr("stroke", "#90EE90")
 			.attr("stroke-width", Math.max(1, 3 * scaleFactor));
 
 		svg
@@ -214,7 +219,7 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 				return dotStart - dotRadius;
 			})
 			.attr("y2", (d) => yScale(d.row))
-			.attr("stroke", "hsl(var(--primary))")
+			.attr("stroke", "#90EE90")
 			.attr("stroke-width", Math.max(1, 3 * scaleFactor));
 	}, [data, habitName, dimensions]);
 
