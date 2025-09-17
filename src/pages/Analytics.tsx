@@ -13,11 +13,9 @@ import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
 import { type MetricSummary } from "#/components/dashboard/MetricGrid";
 import { Loader2, TrendingUp, Settings } from "lucide-react";
-import {
-	ChartDataSchema,
-	fetchHabitTrends,
-} from "#/utils/analyticsData.server";
+import { fetchHabitTrends } from "#/utils/analyticsData.server";
 import { tryCatch } from "#/lib/utils";
+import { ChartDataSchema } from "#/utils/activityDataSchema.server";
 
 const HeatmapPointSchema = z.object({
 	date: z.string(),

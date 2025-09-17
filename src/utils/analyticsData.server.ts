@@ -1,15 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import z from "zod";
-
-export const ChartDataSchema = z.object({
-	habitName: z.string(),
-	data: z.array(
-		z.object({
-			date: z.string(),
-			value: z.number(),
-		}),
-	),
-});
+import { ChartDataSchema } from "./activityDataSchema.server";
 
 // get activity data for the past n days
 export async function fetchHabitTrends(
