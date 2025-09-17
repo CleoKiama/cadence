@@ -11,6 +11,7 @@ export const ChartDataSchema = z.object({
 	),
 });
 
+// get activity data for the past n days
 export async function fetchHabitTrends(
 	days: number,
 ): Promise<z.infer<typeof ChartDataSchema>[]> {
