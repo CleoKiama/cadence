@@ -1,7 +1,10 @@
 use serde::Serialize;
 use tauri::State;
 
-use crate::{db::metrics::{get_all_habits_analytics, get_habit_heatmap_data}, DbConnection};
+use crate::{
+    db::metrics::{get_all_habits_analytics, get_habit_heatmap_data},
+    DbConnection,
+};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,23 +35,13 @@ pub struct HeatmapPoint {
     pub level: u8, // 0-4 for intensity levels
 }
 
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AnalyticsSummary {
-    pub total_habits: u32,
-    pub active_habits: u32,
-    pub total_entries: u32,
-    pub time_range: String,
-}
-
 #[tauri::command]
 pub fn get_analytics_heatmap_data(
     db: State<'_, DbConnection>,
     habit_name: String,
     days: u32,
 ) -> Result<Option<AnalyticsHeatmapData>, String> {
-    let heatmap_data =
-        get_habit_heatmap_data(&db, &habit_name, days).map_err(|e| e.to_string())?;
+    let heatmap_data = get_habit_heatmap_data(&db, &habit_name, days).map_err(|e| e.to_string())?;
 
     if heatmap_data.is_empty() {
         return Ok(None);
