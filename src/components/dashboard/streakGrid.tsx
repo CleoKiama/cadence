@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import z from "zod";
 import { ChartDataSchema } from "#/utils/activityDataSchema.server";
+import { drawSvg } from "./utils/drawSvg";
 
 type MetricData = z.infer<typeof ChartDataSchema>;
 
@@ -51,182 +52,18 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 
 	useEffect(() => {
 		if (!svgRef.current || !data.length) return;
-
-		const { width, height } = dimensions;
-		const daysInWeek = 7;
-
-		// Scale factors based on container size
-		const scaleFactor = Math.min(width, height) / baseWidth;
-		const dotRadius = Math.max(8, 16 * scaleFactor); // Min 8px, scales up
-		const rowPadding = 80 * scaleFactor;
-
-		// Responsive positioning
-		const monthY = height * 0.08; // 8% from top
-		const yearY = height * 0.1; // 8% from top
-		const labelsY = height * 0.15; // 15% from top
-		const gridTop = height * 0.25; // 25% from top, where your yScale starts
-
-		const svg = d3
-			.select(svgRef.current)
-			.attr("viewBox", `0 0 ${baseWidth} ${baseHeight}`)
-			.attr("width", "100%")
-			.attr("height", "100%")
-			.style("max-width", `${width}px`)
-			.style("max-height", `${height}px`);
-
-		const xScale = d3
-			.scaleLinear()
-			.domain([0, daysInWeek])
-			.range([30, baseWidth - 30]); //INFO: used for cx
-
-		const yScale = d3
-			.scaleLinear()
-			.domain([0, Math.ceil(data.length / daysInWeek)])
-			.range([gridTop, baseHeight - rowPadding]);
-
-		const grid = data.map((d, i) => {
-			const col = i % daysInWeek;
-			const row = Math.floor(i / daysInWeek);
-			const day = new Date(d.date).getDate();
-
-			return {
-				...d,
-				row,
-				col,
-				i,
-				day,
-			};
+		const metricData = {
+			habitName,
+			data,
+		};
+		drawSvg({
+			baseWidth,
+			baseHeight,
+			dimensions,
+			currentDate,
+			metricData,
+			svgRef: svgRef.current,
 		});
-
-		//INFO:: remove everything to avoid duplicates on rerenders
-		svg.selectAll("*").remove();
-
-		// Responsive font sizes
-		const titleFontSize = Math.max(12, 20 * scaleFactor);
-		const monthFontSize = Math.max(10, 16 * scaleFactor);
-		const dayFontSize = Math.max(8, 14 * scaleFactor);
-		const valueFontSize = Math.max(6, 12 * scaleFactor);
-
-		// Metric label
-		svg
-			.append("text")
-			.text(habitName)
-			.attr("x", baseWidth / 2)
-			.attr("y", monthY)
-			.attr("text-anchor", "middle")
-			.style("font-size", `${titleFontSize}px`)
-			.style("fill", "hsl(var(--foreground))")
-			.style("font-weight", "bold");
-
-		let monthLabel = currentDate.toLocaleDateString("en-US", {
-			month: "short",
-		});
-		const yearLabel = currentDate.getFullYear();
-
-		svg
-			.append("text")
-			.text(monthLabel)
-			.attr("x", 30)
-			.attr("y", monthY)
-			.attr("text-anchor", "middle")
-			.style("font-size", `${monthFontSize}px`)
-			.style("fill", "hsl(var(--foreground))")
-			.style("font-weight", "bold");
-		svg
-			.append("text")
-			.text(yearLabel)
-			.attr("x", 30)
-			.attr("y", yearY)
-			.attr("text-anchor", "middle")
-			.style("font-size", `${monthFontSize}px`)
-			.style("fill", "hsl(var(--foreground))")
-			.style("font-weight", "bold");
-
-		// Day labels
-		const days: string[] = [];
-		for (let i = 0; i < 7; i++) {
-			const day = new Date(grid[i].date).toLocaleDateString("en-US", {
-				weekday: "short",
-			});
-			days.push(day);
-		}
-
-		svg
-			.selectAll("day-label")
-			.data(days)
-			.enter()
-			.append("text")
-			.text((d) => d)
-			.attr("x", (_, i) => xScale(i))
-			.attr("y", labelsY)
-			.attr("text-anchor", "middle")
-			.style("font-size", `${dayFontSize}px`)
-			.style("fill", "hsl(var(--foreground))")
-			.style("font-weight", "bold");
-
-		svg
-			.selectAll("dot")
-			.data(grid)
-			.enter()
-			.append("circle")
-			.attr("cx", (d) => xScale(d.col))
-			.attr("cy", (d) => yScale(d.row))
-			.attr("r", dotRadius)
-			.attr("fill", "#90EE90");
-
-		svg
-			.selectAll("dot-value")
-			.data(grid)
-			.enter()
-			.append("text")
-			.text((d) => d.day)
-			.attr("x", (d) => xScale(d.col))
-			.attr("y", (d) => yScale(d.row))
-			.attr("text-anchor", "middle")
-			.attr("dy", ".35em")
-			.style("font-size", `${valueFontSize}px`)
-			.style("fill", "white");
-
-		svg
-			.selectAll("dot-streak-line")
-			.data(grid.filter((d) => d.value > 0 && d.i < grid.length - 1)) //remove values with 0 and last value of the month
-			.enter()
-			.append("line")
-			.attr("x1", (d) => {
-				const start = xScale(d.col);
-				return start + dotRadius;
-			})
-			.attr("y1", (d) => yScale(d.row))
-			.attr("x2", (d) => {
-				const end = xScale(d.col + 1); //start of next dot
-				const dotSpacing = xScale(1) - xScale(0); //Distance between centers
-
-				//x2 will be half the normal distance between two dots from the start of t where the next dot would be
-				if (d.col === daysInWeek - 1) return end - Math.floor(dotSpacing / 2);
-				return end - dotRadius; // remove the dotradius to avoid the line going into the next circle
-			}) //start next dot
-			.attr("y2", (d) => yScale(d.row))
-			.attr("stroke", "#90EE90")
-			.attr("stroke-width", Math.max(1, 3 * scaleFactor));
-
-		svg
-			.selectAll("dot-streak-line-start")
-			.data(grid.filter((d) => d.value > 0 && d.col === 0))
-			.enter()
-			.append("line")
-			.attr("x1", (d) => {
-				const dotStart = xScale(d.col);
-				const lineLength = 30 * scaleFactor;
-				return dotStart - lineLength;
-			})
-			.attr("y1", (d) => yScale(d.row))
-			.attr("x2", (d) => {
-				const dotStart = xScale(d.col); //start of next dot
-				return dotStart - dotRadius;
-			})
-			.attr("y2", (d) => yScale(d.row))
-			.attr("stroke", "#90EE90")
-			.attr("stroke-width", Math.max(1, 3 * scaleFactor));
 	}, [data, habitName, dimensions]);
 
 	return (
