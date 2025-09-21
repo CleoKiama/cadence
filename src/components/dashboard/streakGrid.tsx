@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import z from "zod";
-import { ChartDataSchema } from "#/utils/analytics_data";
+import { ChartDataSchema } from "#/utils/activityDataSchema.server";
 
 type MetricData = z.infer<typeof ChartDataSchema>;
 
