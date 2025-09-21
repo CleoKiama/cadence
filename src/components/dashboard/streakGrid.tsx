@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import z from "zod";
-import { ChartDataSchema } from "#/utils/analyticsData.server";
+import { ChartDataSchema } from "#/utils/analytics_data";
 
 type MetricData = z.infer<typeof ChartDataSchema>;
 
 // Base dimensions for viewBox
 const baseWidth = 500;
-const baseHeight = 500;
+const baseHeight = 700;
 
 export default function StreakGrid({ data, habitName }: MetricData) {
 	const svgRef = useRef<SVGSVGElement | null>(null);
@@ -16,6 +16,7 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 		width: baseWidth,
 		height: baseHeight,
 	});
+	const [currentDate, setCurrentDate] = useState(new Date());
 
 	useEffect(() => {
 		const updateDimensions = () => {
@@ -60,7 +61,8 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 		const rowPadding = 80 * scaleFactor;
 
 		// Responsive positioning
-		const monthAndMetricY = height * 0.08; // 8% from top
+		const monthY = height * 0.08; // 8% from top
+		const yearY = height * 0.1; // 8% from top
 		const labelsY = height * 0.15; // 15% from top
 		const gridTop = height * 0.25; // 25% from top, where your yScale starts
 
@@ -110,27 +112,31 @@ export default function StreakGrid({ data, habitName }: MetricData) {
 			.append("text")
 			.text(habitName)
 			.attr("x", baseWidth / 2)
-			.attr("y", monthAndMetricY)
+			.attr("y", monthY)
 			.attr("text-anchor", "middle")
 			.style("font-size", `${titleFontSize}px`)
 			.style("fill", "hsl(var(--foreground))")
 			.style("font-weight", "bold");
 
-		// Month label
-		let month = new Date(data[0].date)
-			.toLocaleDateString("en-US", {
-				month: "short",
-				year: "numeric",
-			})
-			.toUpperCase()
-			.split(" ")
-			.join("\n");
+		let monthLabel = currentDate.toLocaleDateString("en-US", {
+			month: "short",
+		});
+		const yearLabel = currentDate.getFullYear();
 
 		svg
 			.append("text")
-			.text(month)
-			.attr("x", 0)
-			.attr("y", monthAndMetricY)
+			.text(monthLabel)
+			.attr("x", 30)
+			.attr("y", monthY)
+			.attr("text-anchor", "middle")
+			.style("font-size", `${monthFontSize}px`)
+			.style("fill", "hsl(var(--foreground))")
+			.style("font-weight", "bold");
+		svg
+			.append("text")
+			.text(yearLabel)
+			.attr("x", 30)
+			.attr("y", yearY)
 			.attr("text-anchor", "middle")
 			.style("font-size", `${monthFontSize}px`)
 			.style("fill", "hsl(var(--foreground))")

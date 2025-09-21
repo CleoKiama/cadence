@@ -11,10 +11,12 @@ import { formatDisplayDate } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { type MetricSummary } from "#/components/dashboard/MetricGrid";
 import { AlertCircle, Settings } from "lucide-react";
-import { ChartDataSchema, fetchHabitTrends } from "#/utils/analytics_data";
+import { fetchHabitTrends } from "#/utils/analyticsData.server";
 import z from "zod";
 import { tryCatch } from "#/lib/utils";
 import StreakGrid from "#/components/dashboard/streakGrid";
+import getStreakData from "#/utils/streakGridData.server";
+import { ChartDataSchema } from "#/utils/activityDataSchema.server";
 
 interface DashboardProps {
 	habitName: string;
@@ -89,7 +91,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 				}));
 
 				//TODO: fetch data based on number of days of the current month
-				const { data, error } = await tryCatch(fetchHabitTrends(30));
+				const { data, error } = await tryCatch(getStreakData());
 				if (error) throw error;
 				setStreakGridData(data);
 			} catch (error) {
@@ -182,7 +184,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
 
 			{/* streak grid */}
 			{streakGridData && streakGridData.length > 0 && (
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-1">
 					{streakGridItems}
 				</div>
 			)}

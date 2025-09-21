@@ -1,98 +1,21 @@
-use anyhow::anyhow;
-use chrono::{Days, Local, Months};
-use serde::Serialize;
-use std::collections::HashMap;
+use chrono::{Local, Months};
 use tauri::State;
 
-use crate::{core::read_journal::DB_DATE_FORMAT, db::utils::get_all_habits, DbConnection};
-
-#[derive(Serialize)]
-pub struct DataPoint {
-    value: i32,
-    date: String,
-}
-
-#[derive(Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HabitData {
-    habit_name: String,
-    data: Vec<DataPoint>,
-}
+use crate::commands::utils::activity_server::{get_acitivity_data, HabitData};
+use crate::DbConnection;
 
 #[tauri::command]
-pub fn get_recent_activity(
-    db: State<'_, DbConnection>,
-) -> Result<Option<Vec<HabitData>>, String> {
-    let data = get_recent_activity_date(&db).map_err(|e| e.to_string())?;
-    
+pub fn get_recent_activity(db: State<'_, DbConnection>) -> Result<Option<Vec<HabitData>>, String> {
+    let today = Local::now().date_naive();
+    let end_date = today
+        .checked_sub_months(Months::new(1))
+        .ok_or_else(|| "Failed to calculate target date".to_string())?;
+
+    let data = get_acitivity_data(&db, end_date, today).map_err(|e| e.to_string())?; // get data for the past 30 days
+
     if data.is_empty() {
         Ok(None)
     } else {
         Ok(Some(data))
     }
-}
-
-fn get_recent_activity_date(
-    db: &DbConnection,
-) -> Result<Vec<HabitData>, anyhow::Error> {
-    let current_habits = get_all_habits(db)?;
-    let mut habit_data: Vec<HabitData> = Vec::new();
-
-    let today = Local::now().date_naive();
-    let target_date = today
-        .checked_sub_months(Months::new(1))
-        .ok_or_else(|| anyhow!("Failed to calculate target date"))?;
-
-    let conn = db
-        .lock()
-        .map_err(|e| anyhow!("Failed to lock connection: {}", e))?;
-
-    let mut stmt = conn.prepare(
-        "SELECT name, date, value 
-         FROM metrics 
-         WHERE date BETWEEN ?1 AND ?2",
-    )?;
-
-    let mut rows = stmt.query(rusqlite::params![
-        target_date.format(DB_DATE_FORMAT).to_string(),
-        today.format(DB_DATE_FORMAT).to_string(),
-    ])?;
-
-    let mut values: HashMap<(String, String), i32> = HashMap::new();
-
-    while let Some(row) = rows.next()? {
-        let name: String = row.get(0)?;
-        let date: String = row.get(1)?;
-        let value: i32 = row.get(2)?;
-        values.insert((name, date), value);
-    }
-
-    for habit in current_habits {
-        let mut data_points: Vec<DataPoint> = Vec::new();
-        let mut day = target_date;
-
-        while day <= today {
-            let date_str = day.format(DB_DATE_FORMAT).to_string();
-            let value = values
-                .get(&(habit.clone(), date_str.clone()))
-                .copied()
-                .unwrap_or(0);
-
-            data_points.push(DataPoint {
-                value,
-                date: date_str,
-            });
-
-            day = day
-                .checked_add_days(Days::new(1))
-                .ok_or_else(|| anyhow!("Failed to increment date"))?;
-        }
-
-        habit_data.push(HabitData {
-            habit_name: habit,
-            data: data_points,
-        });
-    }
-
-    Ok(habit_data)
 }

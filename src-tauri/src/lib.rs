@@ -99,6 +99,8 @@ pub fn run() {
             get_current_streak,
             get_longest_streak,
             get_dashboard_metrics,
+            //streak grid
+            get_current_streak_data,
             // analytics
             get_recent_activity,
             get_analytics_heatmap_data,
