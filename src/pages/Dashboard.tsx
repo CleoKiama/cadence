@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { MetricGrid } from "#/components/dashboard/habitCard";
+import { MetricGrid } from "#/components/dashboard/habitCardGrid";
 import { StreakCounter } from "#/components/dashboard/StreakCounter";
 import { DashboardLoadingState } from "#/components/dashboard/DashboardLoadingState";
 import { DashboardEmptyState } from "#/components/dashboard/DashboardEmptyState";
@@ -8,7 +8,7 @@ import { Button } from "#/components/ui/button";
 import { useNavigationContext } from "#/contexts/NavigationContext";
 import { formatDisplayDate } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
-import { type MetricSummary } from "#/components/dashboard/habitCard";
+import { type MetricSummary } from "#/components/dashboard/habitCardGrid";
 import { AlertCircle, Settings } from "lucide-react";
 import z from "zod";
 import { ChartDataSchema } from "#/utils/activityDataSchema.server";

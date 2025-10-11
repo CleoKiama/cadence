@@ -1,17 +1,11 @@
 import { useState, useEffect } from "react";
-import { TrendChart } from "#/components/analytics/TrendChart";
-import {
-  CalendarHeatmap,
-  HeatmapDataPoint,
-} from "#/components/analytics/CalendarHeatmap";
-import { StatsSummary } from "#/components/analytics/StatsSummary";
+import { HeatmapDataPoint } from "#/components/analytics/CalendarHeatmap";
 import { EmptyState } from "#/components/shared/EmptyState";
 import { Button } from "#/components/ui/button";
 import { useNavigationContext } from "#/contexts/NavigationContext";
-import { getDateRange } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { z } from "zod";
-import { type MetricSummary } from "#/components/dashboard/habitCard";
+import { type MetricSummary } from "#/components/dashboard/habitCardGrid";
 import { Loader2, TrendingUp, Settings } from "lucide-react";
 import { fetchHabitTrends } from "#/utils/analyticsData.server";
 import { tryCatch } from "#/lib/utils";
@@ -29,7 +23,7 @@ const AnalyticsHeatmapDataSchema = z.object({
 });
 
 type ChartData = z.infer<typeof ChartDataSchema>;
-type AnalyticsHeatmapData = z.infer<typeof AnalyticsHeatmapDataSchema>;
+// type AnalyticsHeatmapData = z.infer<typeof AnalyticsHeatmapDataSchema>;
 
 export const Analytics = () => {
   const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(

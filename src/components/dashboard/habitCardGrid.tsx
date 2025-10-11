@@ -1,95 +1,105 @@
-import { Card } from "#/components/ui/card";
-import { Badge } from "#/components/ui/badge";
-import { CodeIcon, Flame, Minus, TrendingDown, TrendingUp } from "lucide-react";
-import { MetricSummary } from "./habitCard";
+import { useState, useEffect } from "react";
+import { HabitCard } from "./habitCard";
+import { EmptyState } from "#/components/shared/EmptyState";
+import { Button } from "#/components/ui/button";
+import { useNavigationContext } from "#/contexts/NavigationContext";
+import { z } from "zod";
+import { invoke } from "@tauri-apps/api/core";
+import { BarChart3, Settings } from "lucide-react";
+import { Skeleton } from "#/components/ui/skeleton";
 
-const getTrendIcon = (trend: MetricSummary["trend"]) => {
-  switch (trend) {
-    case "up":
-      return <TrendingUp />;
-    case "down":
-      return <TrendingDown />;
-    default:
-      return <Minus />;
+const MetricSummarySchema = z.object({
+  name: z.string(),
+  displayName: z.string(),
+  currentStreak: z.number(),
+  longestStreak: z.number(),
+  weeklyAverage: z.number(),
+  monthlyTotal: z.number(),
+  lastUpdated: z.string(),
+  trend: z.enum(["up", "down", "stable"]),
+});
+
+const MetricGridSchema = z.array(MetricSummarySchema).nullable();
+
+export type MetricSummary = z.infer<typeof MetricSummarySchema>;
+
+export const MetricGrid = () => {
+  const [metrics, setMetrics] = useState<MetricSummary[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const { navigateToSettings } = useNavigationContext();
+
+  useEffect(() => {
+    const fetchMetrics = async () => {
+      try {
+        setLoading(true);
+        const result = await invoke<MetricSummary[] | null>(
+          "get_dashboard_metrics",
+        );
+        const parseResult = MetricGridSchema.safeParse(result);
+        if (!parseResult.success) {
+          console.error("Failed to parse metrics:", parseResult.error);
+          console.log("Response data:", result);
+          setMetrics(null);
+          return;
+        }
+        setMetrics(parseResult.data);
+      } catch (error) {
+        console.error("Error fetching metrics:", error);
+        setMetrics(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMetrics();
+  }, []);
+
+  if (loading) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold mb-6 text-foreground">
+          Your Habits
+        </h2>
+        <div className="flex items-center justify-center py-8">
+          <Skeleton className="h-32 w-full rounded-lg" />;
+        </div>
+      </div>
+    );
   }
-};
 
-const getTrendColor = (trend: MetricSummary["trend"]) => {
-  switch (trend) {
-    case "up":
-      return "text-success";
-    case "down":
-      return "text-destructive";
-    default:
-      return "text-muted-foreground";
+  if (!metrics || metrics.length === 0) {
+    return (
+      <div>
+        <h2 className="text-xl font-semibold mb-6 text-foreground">
+          Your Habits
+        </h2>
+        <EmptyState
+          icon={
+            <BarChart3 className="h-12 w-12 text-muted-foreground mx-auto" />
+          }
+          title="No Habits Tracked"
+          description="Start tracking your habits to see your progress and metrics here."
+          action={
+            <Button onClick={navigateToSettings} size="lg">
+              <Settings className="mr-2 h-4 w-4" />
+              Add Metrics
+            </Button>
+          }
+        />
+      </div>
+    );
   }
-};
 
-export const HabitCard = (metric: MetricSummary) => {
   return (
-    <Card className="relative overflow-hidden hover:shadow-lg hover:-translate-y-1 transition-all duration-200 p-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-center space-x-3">
-          <div className="p-2 rounded-lg bg-primary text-primary-foreground">
-            <CodeIcon />
-          </div>
-          <div>
-            <h3 className="font-semibold text-lg text-foreground">
-              {metric.displayName}
-            </h3>
-            <p className="text-sm text-muted-foreground">
-              Last updated: {new Date(metric.lastUpdated).toLocaleDateString()}
-            </p>
-          </div>
-        </div>
-        <div
-          className={`flex items-center space-x-1 ${getTrendColor(metric.trend)}`}
-        >
-          {getTrendIcon(metric.trend)}
-          <span className="text-sm font-medium">{metric.trend}</span>
-        </div>
+    <div>
+      <h2 className="text-xl font-semibold mb-6 text-foreground ">
+        Your Habits
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {metrics.map((metric, i) => (
+          <HabitCard key={i} {...metric} />
+        ))}
       </div>
-
-      <div className="mt-6 grid grid-cols-2 gap-4">
-        <div className="text-center">
-          <div className="flex items-center justify-center space-x-1">
-            <Flame />
-            <span className="text-2xl font-bold text-foreground">
-              {metric.currentStreak}
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground">Current Streak</p>
-        </div>
-
-        <div className="text-center">
-          <div className="text-2xl font-bold text-foreground">
-            {metric.longestStreak}
-          </div>
-          <p className="text-sm text-muted-foreground">Best Streak</p>
-        </div>
-      </div>
-
-      <div className="mt-4 pt-4 border-t border-border">
-        <div className="flex justify-between items-center">
-          <div>
-            <p className="text-sm text-muted-foreground">Weekly Avg</p>
-            <p className="font-semibold text-foreground">
-              {metric.weeklyAverage}
-            </p>
-          </div>
-          <div>
-            <p className="text-sm text-muted-foreground">Monthly Total</p>
-            <p className="font-semibold text-foreground">
-              {metric.monthlyTotal}
-            </p>
-          </div>
-          <div>
-            <Badge variant={metric.currentStreak > 0 ? "secondary" : "default"}>
-              {metric.currentStreak > 0 ? "Active" : "Inactive"}
-            </Badge>
-          </div>
-        </div>
-      </div>
-    </Card>
+    </div>
   );
 };
