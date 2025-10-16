@@ -1,21 +1,43 @@
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
-import { CartesianGrid, LabelList, Line, LineChart, XAxis } from "recharts";
+import {
+  CartesianGrid,
+  LabelList,
+  Line,
+  LineChart,
+  XAxis,
+  YAxis,
+} from "recharts";
 import {
   ChartConfig,
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
 } from "#/components/ui/chart";
+import { z } from "zod";
+import { useEffect, useState } from "react";
+import { invoke } from "@tauri-apps/api/core";
 
-const chartData = [
-  { day: "Sun", currentWeekValue: 214, prevWeekValue: 198 },
-  { day: "Mon", currentWeekValue: 186, prevWeekValue: 205 },
-  { day: "Tue", currentWeekValue: 305, prevWeekValue: 278 },
-  { day: "Wed", currentWeekValue: 237, prevWeekValue: 241 },
-  { day: "Thu", currentWeekValue: 73, prevWeekValue: 122 },
-  { day: "Fri", currentWeekValue: 209, prevWeekValue: 190 },
-  { day: "Sat", currentWeekValue: 214, prevWeekValue: 230 },
-];
+const chartDataSchema = z.object({
+  currentWeek: z.array(
+    z.object({
+      date: z.string(),
+      value: z.number().nonnegative(),
+    }),
+  ),
+  prevWeek: z.array(
+    z.object({
+      date: z.string(),
+      value: z.number().nonnegative(),
+    }),
+  ),
+});
+
+type ChartDataEntry = {
+  day: string;
+  prevWeekValue: number;
+  currentWeekValue?: number;
+};
+
 const chartConfig = {
   currentWeekValue: {
     label: "current week-",
@@ -28,6 +50,45 @@ const chartConfig = {
 } satisfies ChartConfig;
 
 export default function ChartLineLabel() {
+  const [data, setData] = useState<ChartDataEntry[]>([]);
+  console.log("data", data);
+  const [loading, setLoading] = useState(false);
+  console.log("loading", loading);
+
+  useEffect(() => {
+    const fetch = async () => {
+      const result = await invoke("get_weekly_metric_stats", {
+        habitName: "exercise",
+        weekStartsOn: "Sun", //TODO: update to be dynamic
+      });
+      const parsedResult = chartDataSchema.safeParse(result);
+      if (!parsedResult.success)
+        return console.error(`error parsing the result ${parsedResult.error}`);
+      let data = parsedResult.data.prevWeek.map((item, i) => {
+        const date = new Date(item.date);
+        const day = date.toDateString().split(" ")[0];
+        let entry: ChartDataEntry = {
+          day,
+          prevWeekValue: item.value,
+        };
+        let currentWeekValue = parsedResult.data.currentWeek[i]?.value;
+        if (currentWeekValue !== undefined)
+          entry["currentWeekValue"] = currentWeekValue;
+        return entry;
+      });
+      return data;
+    };
+
+    setLoading(true);
+    fetch()
+      .then((data) => {
+        if (data) setData(data);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <Card>
       <CardHeader>
@@ -37,24 +98,25 @@ export default function ChartLineLabel() {
         <ChartContainer config={chartConfig}>
           <LineChart
             accessibilityLayer
-            data={chartData}
+            data={data}
             margin={{
-              top: 20,
-              left: 12,
-              right: 12,
+              top: 15,
+              left: 20,
+              right: 8,
             }}
           >
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="day"
-              tickLine={false}
+              tickLine={true}
               axisLine={false}
               tickMargin={8}
-              tickFormatter={(currentWeekValue) => currentWeekValue.slice(0, 3)}
+              // tickFormatter={(currentWeekValue) => currentWeekValue.slice(0, 3)}
             />
+
             <ChartTooltip
-              cursor={false}
-              content={<ChartTooltipContent indicator="line" />}
+              cursor={true}
+              content={<ChartTooltipContent indicator="dot" />}
             />
             <Line
               dataKey="prevWeekValue"

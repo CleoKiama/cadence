@@ -16,7 +16,7 @@ export default function HabitModal({ metric }: { metric: MetricSummary }) {
   return (
     <Dialog>
       <DialogTrigger>More Details</DialogTrigger>
-      <DialogContent className="max-w-fit">
+      <DialogContent className="h-3/4 overflow-scroll sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle asChild>
             <header className="shadow-2xl rounded-2xl p-6 bg-background">
@@ -24,7 +24,7 @@ export default function HabitModal({ metric }: { metric: MetricSummary }) {
             </header>
           </DialogTitle>
           <DialogDescription asChild>
-            <ScrollArea>
+            <ScrollArea className="h-full py-10">
               <HabitDetails metric={metric} />
             </ScrollArea>
           </DialogDescription>
