@@ -29,7 +29,7 @@ pub struct DashboardMetrics {
     name: String,
     current_streak: i64,
     longest_streak: i64,
-    weekly_average: f32,
+    weekly_average: i32,
     display_name: String,
     last_updated: String,
     monthly_total: u32,
@@ -216,7 +216,9 @@ mod tests {
 
     use super::*;
     // use crate::db::seed;
+    use crate::db::metrics;
     use crate::db::Db;
+
     fn init_db() -> Result<DbConnection, anyhow::Error> {
         let db_path = "/tmp/habitron.db";
         let db = Db::new(db_path)
@@ -231,9 +233,16 @@ mod tests {
     #[test]
     fn test_weekly_metrics() -> Result<(), anyhow::Error> {
         let db_con = init_db()?;
-        let res = weekly_metric_stats(&db_con, "exercise", "Sun")?;
-        println!("res: {:#?}", res.prev_week);
-        println!("res: {:#?}", res.current_week);
+        let res = weekly_metric_stats(&db_con, "pages_read", "Sun")?;
+        println!("prev week: {:#?}", res.prev_week);
+        println!("current week: {:#?}", res.current_week);
+        Ok(())
+    }
+    #[test]
+    fn get_weekly_average() -> Result<(), anyhow::Error> {
+        let db_con = init_db()?;
+        let result = metrics::get_weekly_metric_avg(&db_con, "dsa_problems_solved")?;
+        println!("result: {:#?}", result);
         Ok(())
     }
 }

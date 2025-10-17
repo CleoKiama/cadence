@@ -9,10 +9,7 @@ use crate::{
     DbConnection,
 };
 
-pub fn get_weekly_metric_avg(
-    db: &DbConnection,
-    habit_name: &str,
-) -> Result<f32, anyhow::Error> {
+pub fn get_weekly_metric_avg(db: &DbConnection, habit_name: &str) -> Result<i32, anyhow::Error> {
     let conn = db.lock().unwrap();
     let now = Local::now();
     let today = now.date_naive();
@@ -22,27 +19,23 @@ pub fn get_weekly_metric_avg(
     let end_date = end.format(DB_DATE_FORMAT).to_string();
     let mut query_stmt = conn
         .prepare(
-            " 
-        SELECT AVG(value)
+            "
+        SELECT round(AVG(value))
         FROM metrics
         WHERE name = ?1
-        AND date >= ?2
-        AND date <= ?3
+        AND date between ?2 AND  ?3
         ",
         )
         .with_context(|| "Failed to prepare SQL statement")?;
     query_stmt
         .query_one(params![habit_name, start_date, end_date], |row| {
             let avg: Option<f32> = row.get(0)?;
-            Ok(avg.unwrap_or(0.0))
+            Ok(avg.unwrap_or(0.0) as i32)
         })
         .map_err(|e| anyhow::anyhow!(e))
 }
 
-pub fn get_monthly_metric_total(
-    db: &DbConnection,
-    habit_name: &str,
-) -> Result<u32, anyhow::Error> {
+pub fn get_monthly_metric_total(db: &DbConnection, habit_name: &str) -> Result<u32, anyhow::Error> {
     let conn = db.lock().unwrap();
     let today = Local::now().date_naive();
 
@@ -101,11 +94,11 @@ fn get_habit_trend_data(
 
     let mut stmt = conn.prepare(
         "
-        SELECT date, value 
-        FROM metrics 
-        WHERE name = ?1 
-        AND date >= ?2 
-        AND date <= ?3 
+        SELECT date, value
+        FROM metrics
+        WHERE name = ?1
+        AND date >= ?2
+        AND date <= ?3
         ORDER BY date ASC
         ",
     )?;
