@@ -106,6 +106,7 @@ export default function ChartLineLabel({ habitName }: { habitName: string }) {
               top: 15,
               left: 10,
               right: 8,
+              bottom: 8,
             }}
           >
             <CartesianGrid vertical={false} />
