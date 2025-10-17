@@ -107,6 +107,10 @@ pub fn run() {
             get_analytics_heatmap_data,
             get_all_analytics_data,
             get_all_habits_longest_streak,
+            // new analytic ones
+            count_all_habits,
+            get_completion_rate,
+            count_active_days,
             //settings
             get_settings,
             is_journal_path_configured,
