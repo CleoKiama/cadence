@@ -54,7 +54,7 @@ const HabitDetails = ({ metric }: { metric: MetricSummary }) => {
           Icon={Calendar1Icon}
         />
       </div>
-      <ChartLineLabel />
+      <ChartLineLabel habitName={metric.name} />
     </div>
   );
 };

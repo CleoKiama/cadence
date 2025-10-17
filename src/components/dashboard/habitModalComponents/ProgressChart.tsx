@@ -1,12 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "#/components/ui/card";
-import {
-  CartesianGrid,
-  LabelList,
-  Line,
-  LineChart,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import {
   ChartConfig,
   ChartContainer,
@@ -49,20 +42,17 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
-export default function ChartLineLabel() {
+export default function ChartLineLabel({ habitName }: { habitName: string }) {
   const [data, setData] = useState<ChartDataEntry[]>([]);
-  console.log("data", data);
   const [loading, setLoading] = useState(false);
   const [yAxisMaxValue, setYAxisMaxvalue] = useState<number | undefined>(
     undefined,
   );
-  console.log("yAxisMaxValue", yAxisMaxValue);
-  console.log("loading", loading);
 
   useEffect(() => {
     const fetch = async () => {
       const result = await invoke("get_weekly_metric_stats", {
-        habitName: "exercise",
+        habitName,
         weekStartsOn: "Sun", //TODO: update to be dynamic
       });
       const parsedResult = chartDataSchema.safeParse(result);
@@ -124,7 +114,6 @@ export default function ChartLineLabel() {
               tickLine={true}
               axisLine={false}
               tickMargin={8}
-              // tickFormatter={(currentWeekValue) => currentWeekValue.slice(0, 3)}
             />
             <YAxis domain={[0, yAxisMaxValue || "auto"]} />
             <ChartTooltip
