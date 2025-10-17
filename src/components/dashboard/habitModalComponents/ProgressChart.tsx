@@ -53,6 +53,10 @@ export default function ChartLineLabel() {
   const [data, setData] = useState<ChartDataEntry[]>([]);
   console.log("data", data);
   const [loading, setLoading] = useState(false);
+  const [yAxisMaxValue, setYAxisMaxvalue] = useState<number | undefined>(
+    undefined,
+  );
+  console.log("yAxisMaxValue", yAxisMaxValue);
   console.log("loading", loading);
 
   useEffect(() => {
@@ -64,9 +68,15 @@ export default function ChartLineLabel() {
       const parsedResult = chartDataSchema.safeParse(result);
       if (!parsedResult.success)
         return console.error(`error parsing the result ${parsedResult.error}`);
+      const yValues: number[] = [];
       let data = parsedResult.data.prevWeek.map((item, i) => {
         const date = new Date(item.date);
         const day = date.toDateString().split(" ")[0];
+        yValues.push(item.value);
+        if (parsedResult.data.currentWeek[i]?.value !== undefined) {
+          yValues.push(parsedResult.data.currentWeek[i].value);
+        }
+        yValues.push();
         let entry: ChartDataEntry = {
           day,
           prevWeekValue: item.value,
@@ -76,6 +86,9 @@ export default function ChartLineLabel() {
           entry["currentWeekValue"] = currentWeekValue;
         return entry;
       });
+      const maxDataValue = Math.max(...yValues);
+      const bufferedMax = Math.floor(maxDataValue * 1.1); // Add 10%
+      setYAxisMaxvalue(bufferedMax);
       return data;
     };
 
@@ -101,7 +114,7 @@ export default function ChartLineLabel() {
             data={data}
             margin={{
               top: 15,
-              left: 20,
+              left: 10,
               right: 8,
             }}
           >
@@ -113,7 +126,7 @@ export default function ChartLineLabel() {
               tickMargin={8}
               // tickFormatter={(currentWeekValue) => currentWeekValue.slice(0, 3)}
             />
-
+            <YAxis domain={[0, yAxisMaxValue || "auto"]} />
             <ChartTooltip
               cursor={true}
               content={<ChartTooltipContent indicator="dot" />}
@@ -129,14 +142,7 @@ export default function ChartLineLabel() {
               activeDot={{
                 r: 6,
               }}
-            >
-              <LabelList
-                position="bottom"
-                offset={12}
-                className="fill-foreground"
-                fontSize={12}
-              />
-            </Line>
+            ></Line>
             <Line
               dataKey="currentWeekValue"
               type="natural"
@@ -148,14 +154,7 @@ export default function ChartLineLabel() {
               activeDot={{
                 r: 6,
               }}
-            >
-              <LabelList
-                position="top"
-                offset={12}
-                className="fill-foreground"
-                fontSize={12}
-              />
-            </Line>
+            ></Line>
           </LineChart>
         </ChartContainer>
       </CardContent>

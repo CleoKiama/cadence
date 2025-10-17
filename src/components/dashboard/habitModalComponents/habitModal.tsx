@@ -16,7 +16,7 @@ export default function HabitModal({ metric }: { metric: MetricSummary }) {
   return (
     <Dialog>
       <DialogTrigger>More Details</DialogTrigger>
-      <DialogContent className="h-3/4 overflow-scroll sm:max-w-2xl">
+      <DialogContent className="h-3/4 overflow-x-hidden  overflow-scroll sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle asChild>
             <header className="shadow-2xl rounded-2xl p-6 bg-background">
@@ -36,7 +36,7 @@ export default function HabitModal({ metric }: { metric: MetricSummary }) {
 
 const HabitDetails = ({ metric }: { metric: MetricSummary }) => {
   return (
-    <div className="px-4 space-y-4">
+    <div className="px-4 space-y-4 overflow-x-hidden">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
         <StatsCard
           name="Current Streak"
