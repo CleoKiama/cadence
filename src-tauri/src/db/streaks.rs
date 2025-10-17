@@ -56,43 +56,41 @@ pub fn get_longest_habit_streak(db: &DbConnection, name: &str) -> Result<i64, an
         conn.prepare("SELECT date FROM metrics WHERE name = ?1 AND value > 0 ORDER BY date ASC")?;
     let date_iter = stmt.query_map(params![name], |row| row.get::<_, String>(0))?;
 
-    let mut dates = Vec::new();
-    for date_result in date_iter {
-        match date_result {
-            Ok(date_str) => {
-                if let Ok(date) = NaiveDate::parse_from_str(&date_str, DB_DATE_FORMAT) {
-                    dates.push(date);
-                } else {
-                    return Err(anyhow::anyhow!(
-                        "Invalid date format in database: {}",
-                        date_str
-                    ));
-                }
-            }
-            Err(e) => return Err(anyhow::anyhow!("Failed to read date from database: {}", e)),
-        }
-    }
+    compute_longest_streak(date_iter)
+}
+
+pub fn compute_longest_streak<T>(date_iter: T) -> Result<i64, anyhow::Error>
+where
+    T: Iterator<Item = Result<String, rusqlite::Error>>,
+{
+    let dates: Vec<NaiveDate> = date_iter
+        .map(|date_result| -> Result<NaiveDate, anyhow::Error> {
+            let date_str = date_result
+                .map_err(|e| anyhow::anyhow!("Failed to read date from database: {}", e))?;
+
+            NaiveDate::parse_from_str(&date_str, DB_DATE_FORMAT)
+                .map_err(|_| anyhow::anyhow!("Invalid date format in database: {}", date_str))
+        })
+        .collect::<Result<Vec<NaiveDate>, anyhow::Error>>()?;
 
     if dates.is_empty() {
-        return Ok(0); // No entries found, return 0
+        return Ok(0);
     }
 
     let mut longest_streak = 1;
     let mut current_streak = 1;
 
-    let dates_iter = dates.windows(2);
-
-    for window in dates_iter {
+    // The core streak calculation logic remains highly efficient.
+    for window in dates.windows(2) {
         let [prev_date, current_date] = window else {
             continue;
         };
-        if let Some(expected_date) = prev_date.checked_add_days(chrono::Days::new(1)) {
-            if *current_date == expected_date {
-                current_streak += 1;
-                longest_streak = longest_streak.max(current_streak);
-            } else {
-                current_streak = 1;
-            }
+
+        if prev_date.checked_add_days(chrono::Days::new(1)) == Some(*current_date) {
+            current_streak += 1;
+            longest_streak = longest_streak.max(current_streak);
+        } else {
+            current_streak = 1;
         }
     }
 

@@ -2,7 +2,10 @@ use serde::Serialize;
 use tauri::State;
 
 use crate::{
-    db::metrics::{get_all_habits_analytics, get_habit_heatmap_data},
+    db::{
+        metrics::{get_all_habits_analytics, get_habit_heatmap_data},
+        streaks::compute_longest_streak,
+    },
     DbConnection,
 };
 
@@ -92,4 +95,22 @@ pub fn get_all_analytics_data(
         .collect();
 
     Ok(Some(result))
+}
+
+#[tauri::command]
+pub fn get_all_habits_longest_streak(db: State<'_, DbConnection>) -> Result<i64, String> {
+    let conn = db.lock().unwrap();
+
+    let mut stmt = conn
+        .prepare("SELECT DISTINCT date FROM metrics WHERE value > 0 ORDER BY date ASC")
+        .map_err(|e| format!("Database error preparing streak query: {}", e))?;
+
+    let date_iter = stmt
+        .query_map([], |row| row.get::<_, String>(0))
+        .map_err(|e| format!("Database error executing streak query: {}", e))?;
+
+    // Call the calculation function and map the final anyhow::Error to String
+    let result = compute_longest_streak(date_iter).map_err(|e| e.to_string())?;
+
+    Ok(result)
 }

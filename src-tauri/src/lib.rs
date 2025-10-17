@@ -106,6 +106,7 @@ pub fn run() {
             get_recent_activity,
             get_analytics_heatmap_data,
             get_all_analytics_data,
+            get_all_habits_longest_streak,
             //settings
             get_settings,
             is_journal_path_configured,
