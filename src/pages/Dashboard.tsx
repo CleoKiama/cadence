@@ -10,8 +10,6 @@ import { formatDisplayDate } from "#/utils/dateUtils";
 import { invoke } from "@tauri-apps/api/core";
 import { type MetricSummary } from "#/components/dashboard/habitCardGrid";
 import { AlertCircle, Settings } from "lucide-react";
-import z from "zod";
-import { ChartDataSchema } from "#/utils/activityDataSchema.server";
 
 interface DashboardProps {
   habitName: string;
@@ -24,8 +22,6 @@ interface DashboardState {
   loading: boolean;
   error: string | null;
 }
-
-type StreakGridData = z.infer<typeof ChartDataSchema>;
 
 export const Dashboard: React.FC<DashboardProps> = ({ habitName }) => {
   const [dashboardState, setDashboardState] = useState<DashboardState>({

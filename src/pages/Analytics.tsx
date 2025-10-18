@@ -1,38 +1,14 @@
 import { useState, useEffect } from "react";
-import { HeatmapDataPoint } from "#/components/analytics/CalendarHeatmap";
 import { EmptyState } from "#/components/shared/EmptyState";
 import { Button } from "#/components/ui/button";
 import { useNavigationContext } from "#/contexts/NavigationContext";
 import { invoke } from "@tauri-apps/api/core";
-import { z } from "zod";
 import { type MetricSummary } from "#/components/dashboard/habitCardGrid";
 import { Loader2, TrendingUp, Settings } from "lucide-react";
 import { fetchHabitTrends } from "#/utils/analyticsData.server";
 import { tryCatch } from "#/lib/utils";
-import { ChartDataSchema } from "#/utils/activityDataSchema.server";
-
-const HeatmapPointSchema = z.object({
-  date: z.string(),
-  count: z.number(),
-  level: z.number().min(0).max(4),
-});
-
-const AnalyticsHeatmapDataSchema = z.object({
-  habitName: z.string(),
-  data: z.array(HeatmapPointSchema),
-});
-
-type ChartData = z.infer<typeof ChartDataSchema>;
-// type AnalyticsHeatmapData = z.infer<typeof AnalyticsHeatmapDataSchema>;
 
 export const Analytics = () => {
-  const [timeRange, setTimeRange] = useState<"7d" | "30d" | "90d" | "1y">(
-    "30d",
-  );
-  const [chartData, setChartData] = useState<ChartData[] | null>(null);
-  const [heatmapData, setHeatmapData] = useState<{
-    [key: string]: HeatmapDataPoint[];
-  }>({});
   const [metrics, setMetrics] = useState<MetricSummary[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -51,15 +27,12 @@ export const Analytics = () => {
 
       // If no metrics, don't proceed with other data fetching
       if (!dashboardMetrics || dashboardMetrics.length === 0) {
-        setChartData(null);
-        setHeatmapData({});
         return;
       }
 
       // Fetch all analytic trend data
       const { data, error } = await tryCatch(fetchHabitTrends(days));
       if (error) throw error;
-      setChartData(data);
     } catch (err) {
       console.error("Failed to fetch analytics data:", err);
       setError(
@@ -71,7 +44,7 @@ export const Analytics = () => {
   };
 
   useEffect(() => {
-    fetchAnalyticsData();
+    void fetchAnalyticsData();
   }, []);
 
   if (loading) {

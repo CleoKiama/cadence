@@ -104,8 +104,6 @@ pub fn run() {
             get_current_streak_data,
             // analytics
             get_recent_activity,
-            get_analytics_heatmap_data,
-            get_all_analytics_data,
             get_all_habits_longest_streak,
             // new analytic ones
             count_all_habits,
