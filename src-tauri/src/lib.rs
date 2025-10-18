@@ -104,11 +104,8 @@ pub fn run() {
             get_current_streak_data,
             // analytics
             get_recent_activity,
-            get_all_habits_longest_streak,
             // new analytic ones
-            count_all_habits,
-            get_completion_rate,
-            count_active_days,
+            get_analytics_summary,
             //settings
             get_settings,
             is_journal_path_configured,

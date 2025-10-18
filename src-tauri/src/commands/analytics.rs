@@ -1,12 +1,36 @@
 use chrono::NaiveDate;
+use serde::Serialize;
 use tauri::State;
 
 use crate::{
     core::read_journal::DB_DATE_FORMAT, db::streaks::compute_longest_streak, DbConnection,
 };
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AnalyticsSummary {
+    total_habits: Option<u32>,
+    completion_rate: f64,
+    active_days: i64,
+    longest_streak: i64,
+}
+
 #[tauri::command]
-pub fn get_all_habits_longest_streak(db: State<'_, DbConnection>) -> Result<i64, String> {
+pub fn get_analytics_summary(db: State<'_, DbConnection>) -> Result<AnalyticsSummary, String> {
+    let completion_rate = get_completion_rate(&db)?;
+    let total_habits = count_all_habits(&db)?;
+    let active_days = count_active_days(&db)?;
+    let longest_streak = get_all_habits_longest_streak(&db)?;
+
+    Ok(AnalyticsSummary {
+        total_habits,
+        completion_rate,
+        active_days,
+        longest_streak,
+    })
+}
+
+fn get_all_habits_longest_streak(db: &DbConnection) -> Result<i64, String> {
     let conn = db.lock().unwrap();
 
     let mut stmt = conn
@@ -23,8 +47,7 @@ pub fn get_all_habits_longest_streak(db: State<'_, DbConnection>) -> Result<i64,
     Ok(result)
 }
 
-#[tauri::command]
-pub fn count_all_habits(db: State<'_, DbConnection>) -> Result<Option<u32>, String> {
+fn count_all_habits(db: &DbConnection) -> Result<Option<u32>, String> {
     let conn = db.lock().unwrap();
     let total = conn
         .query_one(
@@ -36,8 +59,7 @@ pub fn count_all_habits(db: State<'_, DbConnection>) -> Result<Option<u32>, Stri
     Ok(total)
 }
 
-#[tauri::command]
-pub fn get_completion_rate(db: State<'_, DbConnection>) -> Result<f64, String> {
+fn get_completion_rate(db: &DbConnection) -> Result<f64, String> {
     let conn = db.lock().unwrap();
 
     // 1. Get Date Range (MIN and MAX logged dates)
@@ -85,8 +107,7 @@ pub fn get_completion_rate(db: State<'_, DbConnection>) -> Result<f64, String> {
     Ok(completion_rate.min(100.0))
 }
 
-#[tauri::command]
-pub fn count_active_days(db: State<'_, DbConnection>) -> Result<i64, String> {
+fn count_active_days(db: &DbConnection) -> Result<i64, String> {
     let conn = db.lock().unwrap();
 
     // Use COUNT(DISTINCT date) to find the number of unique days with activity (value > 0).
