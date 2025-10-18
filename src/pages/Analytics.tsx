@@ -6,7 +6,7 @@ import { invoke } from "@tauri-apps/api/core";
 import { type MetricSummary } from "#/components/dashboard/habitCardGrid";
 import { Loader2, TrendingUp, Settings } from "lucide-react";
 import { fetchHabitTrends } from "#/utils/analyticsData.server";
-import { tryCatch } from "#/lib/utils";
+import { tryCatch } from "#/utils/misc";
 
 export const Analytics = () => {
   const [metrics, setMetrics] = useState<MetricSummary[] | null>(null);
@@ -31,7 +31,7 @@ export const Analytics = () => {
       }
 
       // Fetch all analytic trend data
-      const { data, error } = await tryCatch(fetchHabitTrends(days));
+      const { error } = await tryCatch(fetchHabitTrends(days));
       if (error) throw error;
     } catch (err) {
       console.error("Failed to fetch analytics data:", err);
