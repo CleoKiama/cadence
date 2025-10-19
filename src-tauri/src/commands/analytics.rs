@@ -9,10 +9,10 @@ use crate::{
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsSummary {
+    longest_streak: i64,
     total_habits: Option<u32>,
     completion_rate: i64,
     active_days: i64,
-    longest_streak: i64,
 }
 
 #[tauri::command]
@@ -23,11 +23,53 @@ pub fn get_analytics_summary(db: State<'_, DbConnection>) -> Result<AnalyticsSum
     let longest_streak = get_all_habits_longest_streak(&db)?;
 
     Ok(AnalyticsSummary {
+        longest_streak,
         total_habits,
         completion_rate,
         active_days,
-        longest_streak,
     })
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+#[derive(Debug)]
+pub struct DayActivity {
+    date: String,
+    value: i32,
+}
+
+#[tauri::command]
+pub fn get_weekly_activity(db: State<'_, DbConnection>) -> Result<Vec<DayActivity>, String> {
+    let conn = db.lock().unwrap();
+    let mut stmt = conn
+        .prepare(
+            "
+        select
+          m.date,
+          count(m.name)
+        from
+          metrics m
+          inner join tracked_metrics tm on m.name = tm.value
+        where
+          m.value > 0
+          and m.date between '2025-10-12' and '2025-10-18'
+        group by
+          m.date
+        order by
+          m.date asc
+    ",
+        )
+        .map_err(|e| format!("Error preparing the query for get weekly_activity {}", e))?;
+    let results = stmt
+        .query_map([], |row| {
+            let date = row.get::<_, String>(0)?;
+            let value = row.get::<_, i32>(1)?;
+            Ok(DayActivity { date, value })
+        })
+        .map_err(|e| format!("Error executing query: {}", e))?
+        .collect::<Result<Vec<DayActivity>, rusqlite::Error>>()
+        .map_err(|e| format!("Error processing row during collection: {}", e))?;
+    Ok(results)
 }
 
 fn get_all_habits_longest_streak(db: &DbConnection) -> Result<i64, String> {

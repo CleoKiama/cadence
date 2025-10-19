@@ -106,6 +106,7 @@ pub fn run() {
             get_recent_activity,
             // new analytic ones
             get_analytics_summary,
+            get_weekly_activity,
             //settings
             get_settings,
             is_journal_path_configured,
