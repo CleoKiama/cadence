@@ -10,7 +10,7 @@ use crate::{
 #[serde(rename_all = "camelCase")]
 pub struct AnalyticsSummary {
     total_habits: Option<u32>,
-    completion_rate: f64,
+    completion_rate: i64,
     active_days: i64,
     longest_streak: i64,
 }
@@ -59,7 +59,7 @@ fn count_all_habits(db: &DbConnection) -> Result<Option<u32>, String> {
     Ok(total)
 }
 
-fn get_completion_rate(db: &DbConnection) -> Result<f64, String> {
+fn get_completion_rate(db: &DbConnection) -> Result<i64, String> {
     let conn = db.lock().unwrap();
 
     // 1. Get Date Range (MIN and MAX logged dates)
@@ -70,7 +70,7 @@ fn get_completion_rate(db: &DbConnection) -> Result<f64, String> {
         .map_err(|e| format!("Database error fetching date range: {}", e))?;
 
     if min_date_str.is_err() || max_date_str.is_err() {
-        return Ok(0.0);
+        return Ok(0);
     }
 
     let min_date_str = min_date_str.unwrap();
@@ -97,14 +97,14 @@ fn get_completion_rate(db: &DbConnection) -> Result<f64, String> {
         .map_err(|e| format!("Database error fetching total unique habits: {}", e))?;
 
     if total_days_logged <= 0 || total_unique_habits <= 0 {
-        return Ok(0.0);
+        return Ok(0);
     }
 
     let total_opportunities = total_days_logged as f64 * total_unique_habits as f64;
 
     let completion_rate = (total_successes as f64 / total_opportunities) * 100.0;
 
-    Ok(completion_rate.min(100.0))
+    Ok(completion_rate.min(100.0) as i64)
 }
 
 fn count_active_days(db: &DbConnection) -> Result<i64, String> {
