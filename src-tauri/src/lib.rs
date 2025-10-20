@@ -39,9 +39,14 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
-            println!("initializing the database");
-            //TODO: update the database path as needed later
-            let db = Db::new("/tmp/habitron.db")?;
+            let db_path = app.path().cache_dir();
+            if db_path.is_err() {
+                panic!("Could not determine cache directory for the application");
+            }
+            let db_path = db_path.unwrap().join("cadance.db");
+            let db_path = db_path.to_str().unwrap();
+
+            let db = Db::new(db_path)?;
             if let Err(err) = db.init_db() {
                 eprintln!("Failed to initialize the database: {}", err);
             }
