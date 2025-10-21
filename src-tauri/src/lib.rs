@@ -13,6 +13,7 @@ use commands::dashboard::*;
 use commands::settings::*;
 use commands::streaks::*;
 use dotenvy::dotenv;
+use tauri_plugin_notification::NotificationExt;
 
 use crate::commands::recent_activity::get_recent_activity;
 use crate::core::file_watcher::WatchCommand;
@@ -37,6 +38,7 @@ pub fn run() {
         }
     }
     tauri::Builder::default()
+        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_dialog::init())
         .setup(move |app| {
             let db_path = app.path().cache_dir();
