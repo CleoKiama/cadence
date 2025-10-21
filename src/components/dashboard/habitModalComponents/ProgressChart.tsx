@@ -45,6 +45,7 @@ const chartConfig = {
 export default function ChartLineLabel({ habitName }: { habitName: string }) {
   const [data, setData] = useState<ChartDataEntry[]>([]);
   const [loading, setLoading] = useState(false);
+  console.log("loading", loading);
   const [yAxisMaxValue, setYAxisMaxvalue] = useState<number | undefined>(
     undefined,
   );

@@ -10,7 +10,6 @@ import {
   Settings,
   TrophyIcon,
   TrendingUpIcon,
-  Calendar1Icon,
   TargetIcon,
   CalendarDays,
 } from "lucide-react";
